@@ -162,13 +162,10 @@ async function handleTranscript(text, regenerate = false) {
     renderHistoryList();
     showPreview(response);
 
-    // TTS if enabled
+    // TTS if enabled — natural voice in the language spoken
     if (document.getElementById('tts-toggle')?.checked && response.content) {
       const textForTTS = extractTTSText(response);
-      if (textForTTS) {
-        const audioUrl = await fetchTTS(textForTTS, response.detected_language || 'en').catch(() => null);
-        if (audioUrl) new Audio(audioUrl).play().catch(() => {});
-      }
+      if (textForTTS) speakResponse(textForTTS, response.detected_language || 'en');
     }
   } catch (err) {
     const msg = err.name === 'TimeoutError'
@@ -213,16 +210,10 @@ function showPreview(response) {
       sender.showContent(response.intent, response.grade, response.subject || session.subject, response);
       showToast('Projected!', 'Content sent to display window.');
     },
-    onSpeak: async () => {
+    onSpeak: () => {
       const text = extractTTSText(response);
       if (!text) { showToast('Nothing to read', 'No text in this response.'); return; }
-      try {
-        const url = await fetchTTS(text, response.detected_language || 'en');
-        const audio = new Audio(url);
-        await audio.play();
-      } catch (err) {
-        showToast('TTS failed', 'Could not play audio. Backend running + online?');
-      }
+      speakResponse(text, response.detected_language || 'en');
     },
   });
 
@@ -363,6 +354,48 @@ langIndicator?.addEventListener('click', () => {
   stt?.setLang(next);
   langLabel.textContent = stt?.getLangLabel() || next;
 });
+
+// ── Speech: prefer natural browser voices, match spoken language, fall back to gTTS ──
+const BCP = { en: 'en-IN', hi: 'hi-IN', ml: 'ml-IN' };
+
+function pickVoice(bcp, langShort) {
+  const voices = window.speechSynthesis?.getVoices?.() || [];
+  if (!voices.length) return null;
+  return voices.find(v => v.lang === bcp && /India|Google|Indian/i.test(v.name))
+      || voices.find(v => v.lang === bcp)
+      || voices.find(v => v.lang?.toLowerCase().startsWith(langShort))
+      || null;
+}
+
+async function speakResponse(text, langShort = 'en') {
+  if (!text) return;
+  const bcp = BCP[langShort] || 'en-IN';
+
+  // 1) Browser speech synthesis (natural OS/Google voices)
+  if ('speechSynthesis' in window) {
+    const tryBrowser = () => {
+      const voice = pickVoice(bcp, langShort);
+      if (!voice) return false;
+      const u = new SpeechSynthesisUtterance(text);
+      u.voice = voice; u.lang = bcp; u.rate = 0.95; u.pitch = 1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      return true;
+    };
+    if (tryBrowser()) return;
+    // voices may load async — wait once, retry
+    await new Promise(r => { window.speechSynthesis.onvoiceschanged = r; setTimeout(r, 400); });
+    if (tryBrowser()) return;
+  }
+
+  // 2) Fallback: gTTS from backend (correct language, more robotic)
+  try {
+    const url = await fetchTTS(text, langShort);
+    await new Audio(url).play();
+  } catch {
+    showToast('Audio unavailable', `No ${bcp} voice on this device.`);
+  }
+}
 
 // ── Toast helper ──
 function showToast(title, msg) {

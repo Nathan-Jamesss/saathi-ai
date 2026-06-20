@@ -25,7 +25,9 @@ async def tts(req: TTSRequest):
     text = req.text[:1000]  # cap at 1000 chars to prevent abuse
 
     try:
-        tts_obj = gTTS(text=text, lang=lang, slow=False)
+        # Indian English accent for en; native voices for hi/ml
+        tld = "co.in" if lang == "en" else "com"
+        tts_obj = gTTS(text=text, lang=lang, tld=tld, slow=False)
         buf = io.BytesIO()
         tts_obj.write_to_fp(buf)
         buf.seek(0)
