@@ -1,0 +1,3 @@
+# Only needed to (re)build the NCERT index locally — NOT for runtime/deploy.
+# Install with: pip install -r requirements-build.txt
+datasets>=2.19.2
