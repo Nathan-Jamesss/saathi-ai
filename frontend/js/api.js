@@ -4,7 +4,7 @@
 // After deploy, replace the production URL with your actual Render service URL.
 const BACKEND_URL = ['localhost', '127.0.0.1'].includes(location.hostname)
   ? 'http://localhost:8000'
-  : 'https://saathi-ai-backend.onrender.com';
+  : 'https://saathi-ai-hfqi.onrender.com';
 
 export async function processTranscript(transcript, sessionContext, regenerate = false) {
   const res = await fetch(`${BACKEND_URL}/api/process`, {
