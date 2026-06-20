@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# Large raw corpus (121 MB) — only needed to rebuild the index, not at runtime
+backend/data/ncert/
+data/ncert/*.json
+# NOTE: backend/data/chroma/ (3 MB) IS committed so RAG works on deploy.
+
+# Node / editors
+node_modules/
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Render build artifacts
+*.log

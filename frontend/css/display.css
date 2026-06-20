@@ -1,0 +1,443 @@
+/* =========================================================
+   Saathi.AI · Projector Display (display.css)
+   Monochrome editorial · optimised for 8–10 m projection
+   ========================================================= */
+
+html { background: var(--bg-primary); }
+body.display-body {
+  background: transparent;
+  color: var(--text-primary);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-body);
+  position: relative;
+}
+#neural { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.display-connecting, .display-wrapper { position: relative; z-index: 1; }
+
+/* glass cards on projector */
+.concept-diagram-box,
+.quiz-question-card,
+.translation-panel-display,
+.activity-step-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border-color: rgba(255,255,255,0.12);
+}
+
+/* ── Connecting screen ── */
+.display-connecting {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+.display-connecting .app-name {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+.display-connecting .app-name span { color: var(--text-muted); }
+.display-connecting p {
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+.display-connecting-hint {
+  font-size: 0.8rem !important;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted) !important;
+  margin-top: 6px;
+}
+
+/* ── Display wrapper ── */
+.display-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 44px 64px 32px;
+  gap: 28px;
+  overflow: hidden;
+}
+
+/* ── Top row: badge + watermark ── */
+.display-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.display-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border: 1px solid var(--border-accent);
+  border-radius: 100px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--text-primary);
+  background: var(--accent-light);
+}
+.display-badge.concept,
+.display-badge.quiz,
+.display-badge.translate,
+.display-badge.activity { color: var(--text-primary); }
+.display-watermark {
+  font-size: 0.8rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ── Main content area ── */
+.display-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 24px;
+}
+
+/* ── Topic heading ── */
+.display-topic {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4.5vw, 4rem);
+  font-weight: 300;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+  line-height: 1.05;
+  flex-shrink: 0;
+}
+.display-topic-meta {
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── CONCEPT: Diagram + key points ── */
+.concept-display-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  flex: 1;
+  overflow: hidden;
+}
+.concept-display-grid.diagram-only { grid-template-columns: 1fr; }
+.concept-diagram-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  overflow: hidden;
+}
+.concept-diagram-box .mermaid svg { max-width: 100%; max-height: 100%; }
+.concept-wiki-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+  filter: grayscale(1) contrast(1.05);
+}
+.concept-right {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+}
+.concept-photo { margin: 0; }
+.concept-photo img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.concept-photo figcaption {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+  letter-spacing: 0.02em;
+}
+.display-key-points {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.display-key-points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 300;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.display-key-points li::before {
+  content: '·';
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.display-analogy {
+  background: var(--accent-light);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--text-muted);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  font-size: clamp(1rem, 1.8vw, 1.3rem);
+  font-weight: 300;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ── QUIZ display ── */
+.quiz-display-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow: hidden;
+}
+.quiz-question-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 44px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+.quiz-q-num-display {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+.quiz-q-text {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2.6vw, 2.2rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.quiz-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.quiz-opt {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  font-size: clamp(1rem, 1.7vw, 1.3rem);
+  font-weight: 300;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.quiz-opt.revealed-correct {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  border-color: var(--success);
+  color: var(--success);
+  font-weight: 400;
+}
+.quiz-opt.revealed-wrong { opacity: 0.35; }
+.quiz-tf-options { display: flex; gap: 24px; }
+.quiz-tf-options .quiz-opt { flex: 1; text-align: center; font-size: 1.5rem; font-weight: 400; }
+.quiz-explanation {
+  font-size: 1rem;
+  font-weight: 300;
+  color: var(--success);
+  padding: 14px 18px;
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+  border-radius: var(--radius-sm);
+  display: none;
+}
+.quiz-explanation.visible { display: block; }
+.quiz-progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.quiz-progress-text {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.quiz-dots { display: flex; gap: 8px; }
+.quiz-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background var(--transition);
+}
+.quiz-dot.done    { background: var(--text-muted); }
+.quiz-dot.current { background: var(--text-primary); }
+
+/* ── TRANSLATION display ── */
+.translation-display-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  flex: 1;
+}
+.translation-panel-display {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.translation-lang-tag {
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--text-muted);
+}
+.translation-text-display {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.translation-translit-display {
+  font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.6;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+/* ── ACTIVITY display ── */
+.activity-display-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  overflow: hidden;
+}
+.activity-display-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.activity-type-tag {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+.activity-step-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 36px 44px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.activity-step-num {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+.activity-step-title-display {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+.activity-step-instruction {
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-weight: 300;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  flex: 1;
+}
+.activity-teacher-note {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: 300;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+/* Activity bottom bar */
+.activity-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 0 4px;
+}
+.activity-step-progress {
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.activity-timer {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-weight: 300;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.activity-timer.warning { color: var(--warning); }
+.activity-timer.danger  { color: var(--danger); }
+.activity-complete {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  color: var(--success);
+  text-align: center;
+}
+.activity-complete .complete-emoji { font-size: 3.5rem; }

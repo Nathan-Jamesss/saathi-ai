@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uvicorn *)",
+      "Bash(python *)",
+      "Bash(curl *)",
+      "Bash(pip *)",
+      "Bash(sleep *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "PowerShell(cd *)",
+      "PowerShell(uvicorn *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Stop-Process *)"
+    ]
+  }
+}

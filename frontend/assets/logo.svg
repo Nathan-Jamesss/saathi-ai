@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+  <circle cx="20" cy="20" r="18" fill="#7c6af7" fill-opacity="0.15" stroke="#7c6af7" stroke-width="2"/>
+  <path d="M13 14h14M13 20h10M13 26h7" stroke="#7c6af7" stroke-width="2.5" stroke-linecap="round"/>
+  <text x="44" y="26" font-family="Noto Sans, sans-serif" font-size="18" font-weight="700" fill="#f0f0f0">Saathi<tspan fill="#7c6af7">.AI</tspan></text>
+</svg>

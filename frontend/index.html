@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saathi.AI · Your co-pilot in the classroom</title>
+  <meta name="description" content="A voice-first AI co-pilot for Indian government school teachers. English, हिन्दी, മലയാളം." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500&family=Inter:wght@300;400;500&family=Noto+Sans+Malayalam:wght@400;500&family=Noto+Sans+Devanagari:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/landing.css" />
+</head>
+<body>
+
+<canvas id="neural" aria-hidden="true"></canvas>
+<div class="veil" aria-hidden="true"></div>
+
+<nav class="nav glass">
+  <a href="/" class="brand">Saathi<span>.AI</span></a>
+  <div class="nav-right">
+    <a href="display.html" target="_blank" class="nav-link">Projector</a>
+    <a href="app.html" class="nav-cta glass">Launch app</a>
+  </div>
+</nav>
+
+<main class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow">Co-pilot in the classroom</span>
+    <h1 class="title">Saathi<span>.AI</span></h1>
+    <p class="langs"><span>English</span><i>·</i><span>हिन्दी</span><i>·</i><span>മലയാളം</span></p>
+    <p class="sub">Speak. Saathi listens, builds the lesson, and puts it on the class screen in seconds.</p>
+    <div class="cta-row">
+      <a href="app.html" class="btn-primary">Start teaching</a>
+      <a href="display.html" target="_blank" class="btn-ghost glass">Open projector</a>
+    </div>
+  </div>
+</main>
+
+<footer class="footer glass">
+  <span>© 2026 Saathi.AI · Connecting Dreams Foundation</span>
+  <a href="https://github.com/Nathan-Jamesss/saathi-ai" target="_blank">GitHub</a>
+</footer>
+
+<script src="js/neural-noise.js"></script>
+<script>
+  initNeuralNoise('#neural', { color: [0.42, 0.40, 0.95], opacity: 0.85, speed: 0.0009 });
+</script>
+</body>
+</html>

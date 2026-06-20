@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saathi.AI · Teacher View</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Noto+Sans+Malayalam:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <!-- Mermaid.js -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <!-- jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+<canvas id="neural" aria-hidden="true"></canvas>
+
+<!-- ══════════════════════════════════════════════
+     SESSION START MODAL
+══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="session-modal">
+  <div class="modal-card">
+    <div class="modal-logo">Saathi<span class="logo-dot">.AI</span></div>
+    <p class="modal-tagline">Your co-pilot in the classroom.</p>
+    <p class="modal-index">Session setup</p>
+
+    <div class="form-group">
+      <label for="grade-select">Grade / Class</label>
+      <select id="grade-select">
+        <option value="8">Class 8</option>
+        <option value="9">Class 9</option>
+        <option value="10" selected>Class 10</option>
+        <option value="11">Class 11</option>
+        <option value="12">Class 12</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="subject-select">Subject</label>
+      <select id="subject-select">
+        <option value="science" selected>Science</option>
+        <option value="mathematics">Mathematics</option>
+        <option value="history">History</option>
+        <option value="geography">Geography</option>
+        <option value="political science">Political Science</option>
+        <option value="economics">Economics</option>
+        <option value="english">English</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%; justify-content:center; padding:14px;" id="begin-session-btn">
+      Begin Session →
+    </button>
+
+    <p class="form-hint">
+      Grade and subject help calibrate explanations. You can also say them aloud mid-session to update.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     APP SHELL
+══════════════════════════════════════════════ -->
+<div class="app-container" id="app-container" style="display:none;">
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="top-bar-left">
+      <div class="top-bar-logo">Saathi<span class="logo-dot">.AI</span></div>
+      <div class="session-info">
+        <strong id="topbar-grade">Class 10</strong>
+        <span>·</span>
+        <span id="topbar-subject">Science</span>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <button class="icon-btn" id="project-btn" title="Open Projector Display" aria-label="Open projector display">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </button>
+      <button class="icon-btn" id="theme-btn" title="Toggle theme" aria-label="Toggle theme">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>
+      </button>
+      <button class="icon-btn" id="settings-btn" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="app-main">
+
+    <!-- ── Left Column ── -->
+    <div class="app-left">
+
+      <!-- Transcript panel -->
+      <div class="transcript-panel">
+        <div class="transcript-panel-header">
+          <span class="panel-label">Live Transcript</span>
+          <button class="lang-indicator" id="lang-indicator" title="Click to change language">
+            <span class="lang-dot"></span>
+            <span id="lang-label">English</span>
+          </button>
+        </div>
+        <div id="transcript-text" class="placeholder">Hold spacebar or click the mic to speak…</div>
+      </div>
+
+      <!-- Preview pane -->
+      <div class="preview-pane" id="preview-pane" style="position:relative;">
+        <!-- Empty state -->
+        <div class="preview-empty" id="preview-empty">
+          <h3 style="color: var(--text-secondary); font-size: 1rem;">Ready to teach</h3>
+          <p>Speak a command to generate content.<br/>Try: <em>"Explain photosynthesis to Class 9"</em></p>
+        </div>
+
+        <!-- Content area (populated by renderer.js) -->
+        <div class="preview-content" id="preview-content"></div>
+
+        <!-- Processing overlay -->
+        <div class="processing-overlay hidden" id="processing-overlay">
+          <div class="spinner"></div>
+          <span>Thinking…</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Right Column: History Sidebar ── -->
+    <aside class="history-sidebar">
+      <div class="history-header">
+        <span class="panel-label">Session History</span>
+        <button class="btn btn-ghost btn-sm" id="clear-session-btn" title="Clear session">Clear</button>
+      </div>
+      <div class="history-list" id="history-list">
+        <div style="padding: 16px 10px; color: var(--text-muted); font-size:0.8rem; text-align:center;">
+          Your session activity will appear here
+        </div>
+      </div>
+      <div class="history-footer">
+        <button class="btn btn-secondary" style="width:100%; justify-content:center;" id="export-pdf-btn">
+          Export PDF
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── Voice Bar (spans full width) ── -->
+    <div class="voice-bar">
+      <button class="mic-btn" id="mic-btn" title="Hold to speak (or hold Spacebar)" aria-label="Hold to speak">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      </button>
+      <div class="voice-info">
+        <div class="voice-status" id="voice-status">Hold SPACE or click mic to speak</div>
+        <div class="voice-hint" id="voice-hint">Speak in English, Hindi (हिंदी), or Malayalam (മലയാളം)</div>
+      </div>
+      <div class="voice-waveform hidden" id="voice-waveform">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+      <form class="type-fallback" id="type-form">
+        <label for="type-input" class="sr-only">Type a command</label>
+        <input type="text" id="type-input" autocomplete="off"
+               placeholder="…or type a command and press Enter" />
+        <button type="submit" class="type-send" id="type-send" title="Send command" aria-label="Send command">→</button>
+      </form>
+    </div>
+
+  </main>
+</div>
+
+<!-- Settings Drawer -->
+<div class="settings-drawer" id="settings-drawer">
+  <div class="settings-title">Settings</div>
+
+  <div class="settings-group">
+    <label>Display</label>
+    <div class="toggle-row">
+      <span>Preview gate (approve before projecting)</span>
+      <label class="toggle">
+        <input type="checkbox" id="preview-gate-toggle" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <span>Read responses aloud (TTS)</span>
+      <label class="toggle">
+        <input type="checkbox" id="tts-toggle" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="settings-group">
+    <label>Language Override</label>
+    <select class="settings-select" id="lang-override">
+      <option value="auto">Auto-detect</option>
+      <option value="en-IN">English (en-IN)</option>
+      <option value="hi-IN">Hindi (hi-IN)</option>
+      <option value="ml-IN">Malayalam (ml-IN)</option>
+    </select>
+  </div>
+
+  <div class="settings-group">
+    <label>Session</label>
+    <button class="btn btn-danger btn-sm" id="settings-clear-btn" style="width:100%; justify-content:center;">
+      Clear Session Data
+    </button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <strong id="toast-title"></strong>
+  <span id="toast-msg"></span>
+</div>
+
+<script src="js/neural-noise.js"></script>
+<script>initNeuralNoise('#neural', { color: [0.40, 0.38, 0.92], opacity: 0.22, speed: 0.0008 });</script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

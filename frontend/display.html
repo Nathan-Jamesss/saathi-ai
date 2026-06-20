@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saathi.AI · Projector Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Noto+Sans+Malayalam:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/display.css" />
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+</head>
+<body class="display-body">
+
+<canvas id="neural" aria-hidden="true"></canvas>
+
+<!-- Connecting / waiting state -->
+<div class="display-connecting" id="display-connecting">
+  <div class="app-name">Saathi<span>.AI</span></div>
+  <div class="spinner" style="width:30px;height:30px;border-width:2px;"></div>
+  <p>Waiting for teacher…</p>
+  <p class="display-connecting-hint">Keep this window open on the projector screen.</p>
+</div>
+
+<!-- Main display area (hidden until content arrives) -->
+<div class="display-wrapper hidden" id="display-wrapper">
+
+  <!-- Top bar: badge + watermark -->
+  <div class="display-topbar">
+    <div class="display-badge" id="display-badge">CONCEPT</div>
+    <div class="display-watermark" id="display-watermark">Class 10 · Science · saathi.ai</div>
+  </div>
+
+  <!-- Dynamic content area · populated by JS -->
+  <div class="display-content" id="display-content"></div>
+
+</div>
+
+<script src="js/neural-noise.js"></script>
+<script>initNeuralNoise('#neural', { color: [0.40, 0.38, 0.92], opacity: 0.28, speed: 0.0008 });</script>
+
+<script type="module">
+  import { DisplayReceiver } from './js/broadcast.js';
+  import { renderDisplay } from './js/renderer.js';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: {
+      background: '#0a0a0a',
+      primaryColor: '#151515',
+      primaryBorderColor: '#3a3a38',
+      primaryTextColor: '#f2f0eb',
+      lineColor: '#56544f',
+      fontFamily: "'Inter Tight', sans-serif",
+      fontSize: '18px',
+    },
+  });
+
+  const receiver = new DisplayReceiver();
+
+  receiver.onMessage((msg) => {
+    const wrapper = document.getElementById('display-wrapper');
+    const connecting = document.getElementById('display-connecting');
+
+    if (msg.type === 'SHOW_CONTENT') {
+      connecting.classList.add('hidden');
+      wrapper.classList.remove('hidden');
+
+      // Update badge and watermark
+      const badgeEl = document.getElementById('display-badge');
+      const watermarkEl = document.getElementById('display-watermark');
+      const { intent, grade, subject, data } = msg;
+
+      const badgeMap = {
+        concept_simplification: { label: 'CONCEPT', cls: 'concept' },
+        quiz_generation: { label: 'QUIZ', cls: 'quiz' },
+        bilingual_translation: { label: 'TRANSLATE', cls: 'translate' },
+        activity_guide: { label: 'ACTIVITY', cls: 'activity' },
+      };
+      const b = badgeMap[intent] || { label: intent.toUpperCase(), cls: 'concept' };
+      badgeEl.textContent = b.label;
+      badgeEl.className = `display-badge ${b.cls}`;
+      watermarkEl.textContent = `Class ${grade} · ${subject} · saathi.ai`;
+
+      // Render content
+      renderDisplay(intent, data, document.getElementById('display-content'), receiver);
+    }
+
+    if (msg.type === 'QUIZ_NEXT')   { window.quizDisplayNext?.(); }
+    if (msg.type === 'QUIZ_REVEAL') { window.quizDisplayReveal?.(); }
+    if (msg.type === 'QUIZ_RESET')  { window.quizDisplayReset?.(); }
+    if (msg.type === 'TIMER_START') { window.activityTimerStart?.(); }
+    if (msg.type === 'TIMER_NEXT')  { window.activityTimerNext?.(); }
+  });
+</script>
+</body>
+</html>
