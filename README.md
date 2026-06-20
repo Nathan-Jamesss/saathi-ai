@@ -1,172 +1,171 @@
-# Saathi.AI — Voice-Enabled AI Teaching Assistant
+# Saathi.AI — Your co-pilot in the classroom
 
-> **Saathi** (साथी) = Companion in Hindi  
-> *"Your co-pilot in the classroom."*
+> **Saathi** (साथी) = companion. A voice-first AI helper for Indian government school teachers.
+> Speak in English, Hindi, or Malayalam. Saathi listens, builds the lesson, and puts it on the class screen in seconds.
 
-Built for Connecting Dreams Foundation Round 2 · Deadline: June 20, 2026
+Built for **Connecting Dreams Foundation, Round 2** (Option A).
 
 ---
 
-## What it is
+## Live links (open these)
 
-Saathi.AI is a browser-based, voice-first AI co-pilot for Indian government school teachers. The teacher speaks naturally in English, Hindi, or Malayalam. The system listens, classifies intent, retrieves NCERT curriculum content, generates a response using Gemini 2.5 Flash, and projects it to the classroom screen — all within 3–5 seconds, no typing required.
+| Link | What it is |
+|---|---|
+| **https://frontend-vert-ten-18.vercel.app** | **Main app — open this first.** The landing page, then click "Launch app". |
+| https://frontend-vert-ten-18.vercel.app/app.html | **Teacher screen.** Where the teacher speaks or types commands. |
+| https://frontend-vert-ten-18.vercel.app/display.html | **Projector screen.** The big clean screen the students see. |
+| https://saathi-ai-hfqi.onrender.com/api/health | Backend health check (should say `ok`). Judges don't need this; the app uses it. |
+| https://github.com/Nathan-Jamesss/saathi-ai | Source code. |
 
-**It does NOT replace the teacher.** It gives them 10 more minutes of teaching time per class.
+> First command may take ~30 seconds if the free backend was idle (it shows "Waking the server"). A scheduled ping keeps it awake, so normally it's instant. Best viewed in **Chrome**.
 
-## Live Demo
+---
 
-- **Frontend:** https://saathi-ai.vercel.app
-- **Backend API:** https://saathi-ai-backend.onrender.com/api/health
+## Why are there TWO screens (teacher + projector)?
 
-> **Note:** The Render free-tier backend sleeps after 15 min inactivity. The landing page will show a warm-up message (~20s) if it's waking up.
+This is the core idea, so here it is plainly:
 
-## Tech Stack
+- A real classroom has **two displays**: the teacher's laptop, and the projector/smart-board the whole class sees.
+- The **teacher screen** (`app.html`) has the controls — the mic, the preview, the buttons. This stays on the teacher's laptop. Students never see the messy control panel.
+- The **projector screen** (`display.html`) is clean and huge — just the diagram, the quiz, the timer. No buttons, no clutter. This is dragged onto the projector.
+
+The teacher decides *what* and *when* to show. They preview an answer privately, then tap "Project to class" and it appears on the big screen. They are always in control.
+
+The two screens talk to each other instantly inside the browser (BroadcastChannel) — no internet round-trip needed between them. So when the teacher clicks "Next question", the projector changes immediately.
+
+**In short:** teacher screen = the cockpit, projector screen = what the passengers see.
+
+---
+
+## What happens when a teacher speaks (simple flow)
+
+```
+   Teacher speaks: "explain photosynthesis to class 9"
+                 |
+                 v
+   [1] Browser turns voice into text (Web Speech API)
+                 |
+                 v
+   [2] Text sent to the backend
+                 |
+                 v
+   [3] Intent Router (Gemini): "what does the teacher want?"
+        -> decides: concept / quiz / translation / activity
+                 |
+                 v
+   [4] RAG: find matching NCERT textbook content (ChromaDB)
+                 |
+                 v
+   [5] Content generation (Gemini): build the answer
+        + grab a real image (Wikipedia / Wikimedia)
+        + build a diagram (Mermaid)
+                 |
+                 v
+   [6] Answer shown on the TEACHER screen (preview)
+                 |
+                 v
+   [7] Teacher taps "Project to class"
+                 |
+                 v
+   [8] Answer appears BIG on the PROJECTOR screen
+```
+
+All of this takes about 3 to 5 seconds. No typing.
+
+---
+
+## The four features
+
+All four are triggered by **just speaking** — no mode switching, no menus.
+
+| # | Say this | What appears |
+|---|---|---|
+| **1. Live Concept Simplification** | "explain photosynthesis to class 9" | Explanation in simple language + a diagram + a real photo + key points |
+| **2. Voice-Triggered Quizzing** | "give me 5 MCQ on photosynthesis" | Quiz questions; teacher reveals answers one by one on the projector |
+| **3. Bilingual Dictation & Translation** | "translate to Malayalam: water is essential" | The sentence side by side, English and Malayalam, with pronunciation |
+| **4. Hands-Free Activity Guide** | "10 minute group activity on the water cycle" | Step-by-step guide with a countdown timer running on the projector |
+
+**The two required features (Option A): #1 Live Concept Simplification and #2 Voice-Triggered Quizzing.** Features #3 and #4 are built and working as a bonus.
+
+---
+
+## Why this exists
+
+India has around **25 crore** school children but not enough teachers — over **10 lakh** teaching posts lie empty. In many government schools one teacher handles 40 to 60 students at once. There's no time to stop mid-lesson, search, and explain a doubt that's not in the textbook.
+
+Saathi takes that load off. It does the fetch-and-display grunt work in seconds, in the teacher's own language, so the teacher can focus on the part only a human can do.
+
+**It does not replace the teacher. It is a companion that lightens the burden.**
+
+---
+
+## Tech stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vanilla HTML + CSS + JavaScript (no framework) |
-| Backend | Python 3.11 + FastAPI |
-| LLM | Gemini 2.5 Flash (Google AI Studio free tier) |
-| STT | Web Speech API (browser-native, Chrome) |
-| TTS | gTTS (Python, via `/api/tts`) |
-| RAG Vector Store | ChromaDB (persistent, embedded in FastAPI) |
-| Embedding Model | `text-embedding-004` (Google, free tier) |
-| Diagram Rendering | Mermaid.js (CDN, client-side) |
-| Image Enrichment | Wikipedia REST API (free) |
-| PDF Export | jsPDF (client-side) |
-| Frontend Hosting | Vercel (free tier) |
-| Backend Hosting | Render (free tier) |
+| Frontend | Vanilla HTML + CSS + JavaScript (no framework), hosted on **Vercel** |
+| Backend | Python 3.11 + **FastAPI**, hosted on **Render** |
+| AI model | **Gemini 2.5 Flash** (intent routing + content generation) |
+| Speech to text | Web Speech API (browser-native) |
+| Text to speech | Browser voices (natural, language-matched) with gTTS fallback |
+| Knowledge base (RAG) | **ChromaDB** over NCERT Class 6–12 text |
+| Embeddings | `gemini-embedding-001` |
+| Diagrams | Mermaid.js (client-side) |
+| Images | Wikipedia REST + Wikimedia Commons |
+| PDF export | jsPDF (client-side) |
+| Background visual | Custom WebGL shader (vanilla) |
 
-**Total running cost: ₹0**
-
-## Architecture Diagram
-
-```
-BROWSER (Chrome)
-┌─────────────────────────────────────────────────────┐
-│  Teacher Control View                                │
-│  Mic (spacebar) → Live Transcript → Preview Pane     │
-│  Session History Sidebar → Export PDF                │
-│             ↕ BroadcastChannel                       │
-│  Projector Display View (new window)                 │
-│  Large-font content · Mermaid diagrams · Timer       │
-└─────────────────────────────────────────────────────┘
-         │ Web Speech API (STT)         │ gTTS (TTS)
-         ▼                              ▼
-FASTAPI BACKEND (Render)
-┌─────────────────────────────────────────────────────┐
-│  POST /api/process                                   │
-│    → Intent Router (Gemini Flash, temp=0.1)          │
-│    → RAG Retrieval (ChromaDB + text-embedding-004)   │
-│    → Feature Handler (Gemini Flash, temp=0.4–0.5)    │
-│    → Wikipedia image fetch (async)                   │
-│    → JSON response                                   │
-│  POST /api/tts  →  gTTS audio stream                 │
-│  GET  /api/health                                    │
-└─────────────────────────────────────────────────────┘
-```
-
-## Prompt Design
-
-### Intent Router
-A Gemini Flash call with `temperature=0.1` (low, for classification accuracy). The prompt includes session context (grade, subject, previous topic) so the model can infer missing parameters from speech. Handles English, Hindi, Malayalam, and code-mixed input.
-
-Output: strict JSON with `intent`, `topic`, `grade`, `language`, `confidence`, and feature-specific params.
-
-### Content Generation Prompts (per feature)
-
-| Feature | Temperature | Key Design Decisions |
-|---|---|---|
-| Concept Simplification | 0.4 | Grade-calibrated; NCERT context injected; Mermaid diagram in output; code-mixing allowed |
-| Quiz Generation | 0.5 | Difficulty mix (40/40/20); NCERT-grounded; deduplicated against session history |
-| Translation | 0.2 | Keeps technical terms in English; transliteration for Malayalam only |
-| Activity Guide | 0.5 | Steps must sum to exact duration; max 6 steps; student-facing vs teacher-facing instructions split |
-
-All prompts use `response_mime_type: application/json` for reliable structured output.
-
-## Localization
-
-| Language | STT (Web Speech API) | TTS (gTTS) | Gemini Output |
-|---|---|---|---|
-| English (Indian) | `en-IN` | `en` | ✅ |
-| Hindi | `hi-IN` | `hi` | ✅ |
-| Malayalam | `ml-IN` | `ml` | ✅ |
-
-**Auto-detection:** Unicode range check on transcript text. Malayalam (U+0D00–U+0D7F) → switch to `ml-IN`. Devanagari (U+0900–U+097F) → `hi-IN`. The teacher can also manually override via the language indicator or settings panel.
-
-**Font:** Noto Sans covers Latin, Devanagari, and Malayalam in a single font family — no separate font loading per language.
-
-## How to Run Locally
-
-### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your GEMINI_API_KEY
-
-# (Optional) Build NCERT index
-python scripts/download_ncert.py
-python scripts/build_index.py
-
-# Start server
-uvicorn main:app --reload --port 8000
-```
-
-### Frontend
-```bash
-# Option 1: Live Server (VS Code extension)
-# Open frontend/index.html with Live Server
-
-# Option 2: Python
-cd frontend
-python -m http.server 5500
-# Open http://localhost:5500
-```
-
-Update `frontend/js/api.js` — change `BACKEND_URL` to `http://localhost:8000`.
-
-## Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `GEMINI_API_KEY` | Google AI Studio API key (required) | — |
-| `CHROMA_PERSIST_DIR` | ChromaDB storage path | `./data/chroma` |
-
-## Known Limitations
-
-1. **Chrome only** — Web Speech API is not supported in Firefox or Safari.
-2. **Malayalam/Hindi in PDF** — jsPDF's built-in fonts don't support Indic scripts. Malayalam/Hindi text is not included in PDF exports (English content and transliterations are exported instead).
-3. **Render cold start** — Free-tier backend sleeps after 15 min. First request after sleep takes ~25–35s.
-4. **RAG requires index build** — If `build_index.py` hasn't run, the system falls back to Gemini's general knowledge (still functional, but not NCERT-grounded).
-5. **Rate limits** — Gemini 2.5 Flash free tier: ~10–15 RPM. Suitable for classroom use (1 command every 2–3 min), not for rapid automated testing.
-
-## File Structure
-
-```
-saathi-ai/
-├── frontend/          → Deployed to Vercel
-│   ├── index.html     Landing page
-│   ├── app.html       Teacher Control View
-│   ├── display.html   Projector Display View
-│   ├── css/           Design system + page styles
-│   └── js/            STT, session, API, renderer, broadcast, export, app
-├── backend/           → Deployed to Render
-│   ├── main.py        FastAPI entrypoint + CORS
-│   ├── api/           /process, /tts, /export, /health
-│   ├── core/          intent_router, concept, quiz, translation, activity, rag, wikipedia
-│   ├── prompts/       Prompt templates (5 features)
-│   └── scripts/       build_index.py, download_ncert.py
-└── data/
-    ├── ncert/         Raw NCERT text chunks (JSON)
-    └── chroma/        ChromaDB persistent storage
-```
-
-## Built for
-
-**Connecting Dreams Foundation Round 2** — Option A: AI Teaching Assistant  
-Built by Nathan James · June 2026
+**Running cost: effectively ₹0** (free tiers + a rotating pool of free API keys).
 
 ---
 
-*Stack: Gemini 2.5 Flash · ChromaDB · FastAPI · Vercel · Render · Web Speech API · gTTS · Mermaid.js · jsPDF · Total cost: ₹0*
+## Prompt design (short version)
+
+- **Intent Router** — Gemini at low temperature (0.1) for accurate classification. Gets session context (grade, subject, language) so it can fill in missing details from natural speech. Handles mixed languages (Hinglish, Manglish). Returns strict JSON.
+- **Per-feature generation** — separate prompts, each grounded in retrieved NCERT content, calibrated to the class grade, output in the language the teacher spoke. Technical terms stay in English even in Malayalam/Hindi output (how real teachers talk).
+
+## Localization
+
+Detects the language from the transcript (Unicode range check): Malayalam → `ml-IN`, Devanagari → `hi-IN`, else `en-IN`. The reply, the voice, and the on-screen text all match the language spoken. Noto Sans renders all three scripts.
+
+## Reliability notes
+
+- **7 API keys rotate automatically.** When one hits the free daily quota, the app switches to the next — no downtime mid-demo.
+- **Backend kept awake** by a GitHub Action pinging it every 10 minutes, so the free server never sleeps.
+
+---
+
+## Run locally
+
+**Backend**
+```bash
+cd backend
+pip install -r requirements.txt
+cp .env.example .env          # add GEMINI_API_KEYS=key1,key2,...
+uvicorn main:app --reload --port 8000
+```
+
+**Frontend**
+```bash
+cd frontend
+python -m http.server 3000    # open http://localhost:3000
+```
+The frontend auto-uses `localhost:8000` when run locally, and the live Render backend when deployed.
+
+**Environment variables**
+
+| Variable | What |
+|---|---|
+| `GEMINI_API_KEYS` | One or more Google AI Studio keys, comma-separated (rotates on quota) |
+| `CHROMA_PERSIST_DIR` | ChromaDB path (default `./data/chroma`) |
+
+## Known limitations
+
+1. **Chrome recommended** — Web Speech voice input is Chrome-native. A type-a-command box is provided as a fallback for any browser.
+2. **Malayalam TTS** — uses the device's Malayalam voice if present; otherwise a more robotic gTTS fallback.
+3. **PDF export** — Indic scripts fall back to transliteration (jsPDF font limitation).
+4. **Free-tier quota** — the rotating key pool handles normal demo load; very heavy rapid testing can still exhaust all keys for the day.
+
+---
+
+Built by Nathan James for Connecting Dreams Foundation, Round 2.
