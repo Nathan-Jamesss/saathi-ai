@@ -140,6 +140,11 @@ async function handleTranscript(text, regenerate = false) {
   if (!text.trim()) return;
   setProcessing(true);
 
+  // If the (free) server was asleep, the first call can take ~30-50s. Tell the user.
+  const wakeHint = setTimeout(() => {
+    showToast('Waking the server', 'First request after idle takes ~30s. Hang on.');
+  }, 5000);
+
   try {
     const ctx = getSessionContext(session);
     const response = await processTranscript(text, ctx, regenerate);
@@ -166,8 +171,12 @@ async function handleTranscript(text, regenerate = false) {
       }
     }
   } catch (err) {
-    showToast('Error', err.message || 'Could not process request. Is the backend running?');
+    const msg = err.name === 'TimeoutError'
+      ? 'Server took too long to wake. Try once more in a few seconds.'
+      : (err.message || 'Could not reach the server. Try again.');
+    showToast('Error', msg);
   } finally {
+    clearTimeout(wakeHint);
     setProcessing(false);
   }
 }

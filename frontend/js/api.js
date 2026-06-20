@@ -11,6 +11,7 @@ export async function processTranscript(transcript, sessionContext, regenerate =
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ transcript, session: sessionContext, regenerate }),
+    signal: AbortSignal.timeout(90000),  // cold-started server can take ~30-50s
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
