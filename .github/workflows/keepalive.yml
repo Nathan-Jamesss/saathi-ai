@@ -3,7 +3,7 @@ name: Keep backend awake
 # Pings the Render backend so it never idles into cold-start sleep.
 on:
   schedule:
-    - cron: "*/10 * * * *"   # every 10 minutes
+    - cron: "*/5 * * * *"   # every 5 minutes (GH Actions cron is best-effort and can drift; tighter interval gives margin against Render's 15min sleep)
   workflow_dispatch:           # allow manual run from the Actions tab
 
 jobs:
