@@ -79,3 +79,29 @@ def test_admin_can_deactivate_teacher(client):
         json={"email": "to-deactivate@example.com", "password": "pw"},
     )
     assert login.status_code == 403
+
+
+def test_teacher_cannot_list_teachers(client):
+    signup = client.post(
+        "/api/auth/signup",
+        json={"email": "list-non-admin@example.com", "password": "pw", "name": "T"},
+    )
+    token = signup.json()["token"]
+    resp = client.get(
+        "/api/auth/admin/teachers", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 403
+
+
+def test_teacher_cannot_patch_teacher(client):
+    signup = client.post(
+        "/api/auth/signup",
+        json={"email": "patch-non-admin@example.com", "password": "pw", "name": "T"},
+    )
+    token = signup.json()["token"]
+    resp = client.patch(
+        "/api/auth/admin/teachers/1",
+        json={"is_active": False},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
