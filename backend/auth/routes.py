@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from db import get_db
 from auth.models import Role, SessionHistory, User
 from auth.security import create_token, hash_password, verify_password
-from auth.deps import get_current_user
+from auth.deps import get_current_user, require_admin
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -121,3 +121,84 @@ def my_history(user: User = Depends(get_current_user), db: Session = Depends(get
         )
         for r in rows
     ]
+
+
+class TeacherCreateRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    school: Optional[str] = None
+
+
+class TeacherResponse(BaseModel):
+    id: int
+    email: str
+    name: str
+    is_active: bool
+    session_count: int
+
+
+class TeacherPatchRequest(BaseModel):
+    is_active: bool
+
+
+def _teacher_response(db: Session, teacher: User) -> TeacherResponse:
+    count = len(
+        db.exec(
+            select(SessionHistory).where(SessionHistory.user_id == teacher.id)
+        ).all()
+    )
+    return TeacherResponse(
+        id=teacher.id,
+        email=teacher.email,
+        name=teacher.name,
+        is_active=teacher.is_active,
+        session_count=count,
+    )
+
+
+@router.post("/admin/teachers", response_model=TeacherResponse)
+def admin_create_teacher(
+    req: TeacherCreateRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    existing = db.exec(select(User).where(User.email == req.email)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    teacher = User(
+        email=req.email,
+        password_hash=hash_password(req.password),
+        role=Role.teacher,
+        name=req.name,
+        school=req.school,
+    )
+    db.add(teacher)
+    db.commit()
+    db.refresh(teacher)
+    return _teacher_response(db, teacher)
+
+
+@router.get("/admin/teachers", response_model=List[TeacherResponse])
+def admin_list_teachers(
+    _admin: User = Depends(require_admin), db: Session = Depends(get_db)
+):
+    teachers = db.exec(select(User).where(User.role == Role.teacher)).all()
+    return [_teacher_response(db, t) for t in teachers]
+
+
+@router.patch("/admin/teachers/{teacher_id}", response_model=TeacherResponse)
+def admin_patch_teacher(
+    teacher_id: int,
+    req: TeacherPatchRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    teacher = db.get(User, teacher_id)
+    if not teacher or teacher.role != Role.teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    teacher.is_active = req.is_active
+    db.add(teacher)
+    db.commit()
+    db.refresh(teacher)
+    return _teacher_response(db, teacher)
