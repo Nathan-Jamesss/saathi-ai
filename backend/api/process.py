@@ -1,6 +1,6 @@
 """POST /api/process — main pipeline endpoint"""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 import uuid
@@ -11,6 +11,14 @@ from core.concept       import generate_concept
 from core.quiz          import generate_quiz
 from core.translation   import generate_translation
 from core.activity      import generate_activity
+
+from typing import Optional as OptionalType
+
+from sqlmodel import Session
+
+from db import get_db
+from auth.deps import get_optional_user
+from auth.models import SessionHistory, User
 
 router = APIRouter()
 
@@ -30,7 +38,11 @@ class ProcessRequest(BaseModel):
 
 
 @router.post("/process")
-async def process(req: ProcessRequest):
+async def process(
+    req: ProcessRequest,
+    user: OptionalType[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+):
     transcript = req.transcript.strip()
     if not transcript:
         raise HTTPException(status_code=400, detail="Transcript is empty")
@@ -82,7 +94,7 @@ async def process(req: ProcessRequest):
             intent_data.get("activity_type", "group"),
         )
 
-    return {
+    result = {
         "intent": intent,
         "detected_language": language,
         "topic": topic,
@@ -92,3 +104,20 @@ async def process(req: ProcessRequest):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session_id": str(uuid.uuid4()),
     }
+
+    if user:
+        db.add(
+            SessionHistory(
+                user_id=user.id,
+                intent=intent,
+                topic=topic,
+                grade=grade,
+                subject=subject,
+                language=language,
+                content_json=content,
+                rating=0,
+            )
+        )
+        db.commit()
+
+    return result

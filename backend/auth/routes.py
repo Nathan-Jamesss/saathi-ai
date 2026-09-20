@@ -1,12 +1,12 @@
 """Auth routes: signup, login, profile"""
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import get_db
-from auth.models import Role, User
+from auth.models import Role, SessionHistory, User
 from auth.security import create_token, hash_password, verify_password
 from auth.deps import get_current_user
 
@@ -86,3 +86,38 @@ def me(user: User = Depends(get_current_user)):
         grade_default=user.grade_default,
         subject_default=user.subject_default,
     )
+
+
+class HistoryEntry(BaseModel):
+    id: int
+    intent: str
+    topic: Optional[str]
+    grade: int
+    subject: str
+    language: str
+    content_json: dict
+    rating: int
+    created_at: str
+
+
+@router.get("/me/history", response_model=List[HistoryEntry])
+def my_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.exec(
+        select(SessionHistory)
+        .where(SessionHistory.user_id == user.id)
+        .order_by(SessionHistory.created_at.desc())
+    ).all()
+    return [
+        HistoryEntry(
+            id=r.id,
+            intent=r.intent,
+            topic=r.topic,
+            grade=r.grade,
+            subject=r.subject,
+            language=r.language,
+            content_json=r.content_json,
+            rating=r.rating,
+            created_at=r.created_at.isoformat(),
+        )
+        for r in rows
+    ]
