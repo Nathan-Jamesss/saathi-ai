@@ -1,3 +1,9 @@
+from sqlmodel import Session, select
+
+from db import engine
+from auth.models import User
+
+
 def test_signup_creates_teacher_and_ignores_role_override(client):
     resp = client.post(
         "/api/auth/signup",
@@ -65,3 +71,23 @@ def test_me_returns_profile(client):
     resp = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 200
     assert resp.json()["email"] == "me-profile@example.com"
+
+
+def test_login_rejects_deactivated_user(client):
+    client.post(
+        "/api/auth/signup",
+        json={"email": "deactivated@example.com", "password": "correct-pw", "name": "D"},
+    )
+    with Session(engine) as session:
+        user = session.exec(
+            select(User).where(User.email == "deactivated@example.com")
+        ).first()
+        user.is_active = False
+        session.add(user)
+        session.commit()
+
+    resp = client.post(
+        "/api/auth/login",
+        json={"email": "deactivated@example.com", "password": "correct-pw"},
+    )
+    assert resp.status_code == 403
