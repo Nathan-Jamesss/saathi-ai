@@ -1,5 +1,7 @@
 """POST /api/process — main pipeline endpoint"""
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
@@ -19,6 +21,8 @@ from sqlmodel import Session
 from db import get_db
 from auth.deps import get_optional_user
 from auth.models import SessionHistory, User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -106,18 +110,23 @@ async def process(
     }
 
     if user:
-        db.add(
-            SessionHistory(
-                user_id=user.id,
-                intent=intent,
-                topic=topic,
-                grade=grade,
-                subject=subject,
-                language=language,
-                content_json=content,
-                rating=0,
+        try:
+            db.add(
+                SessionHistory(
+                    user_id=user.id,
+                    intent=intent,
+                    topic=topic,
+                    grade=grade,
+                    subject=subject,
+                    language=language,
+                    content_json=content,
+                    rating=0,
+                )
             )
-        )
-        db.commit()
+            db.commit()
+        except Exception:
+            logger.warning(
+                "Failed to save session history for user %s", user.id, exc_info=True
+            )
 
     return result

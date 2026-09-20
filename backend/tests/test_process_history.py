@@ -1,5 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
+from sqlmodel import Session
+
 
 def _signup(client, email):
     resp = client.post(
@@ -56,6 +58,40 @@ def test_process_with_token_saves_history(client):
     assert len(rows) == 1
     assert rows[0]["topic"] == "photosynthesis"
     assert rows[0]["content_json"]["explanation"] == "plants make food"
+
+
+def test_process_history_save_failure_does_not_fail_request(client):
+    token = _signup(client, "hist3@example.com")
+
+    with patch(
+        "api.process.route_intent",
+        new=AsyncMock(
+            return_value={
+                "intent": "concept_simplification",
+                "topic": "osmosis",
+                "grade": 10,
+                "subject": "science",
+                "language": "en",
+                "confidence": 0.9,
+            }
+        ),
+    ), patch(
+        "api.process.generate_concept",
+        new=AsyncMock(return_value={"explanation": "water moves across membranes"}),
+    ), patch.object(
+        Session, "commit", side_effect=Exception("db unavailable")
+    ):
+        resp = client.post(
+            "/api/process",
+            json={"transcript": "explain osmosis", "session": {}, "regenerate": False},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["intent"] == "concept_simplification"
+    assert body["topic"] == "osmosis"
+    assert body["content"]["explanation"] == "water moves across membranes"
 
 
 def test_process_without_token_does_not_save_history(client):
