@@ -11,6 +11,7 @@ from api.health  import router as health_router
 from api.process import router as process_router
 from api.tts     import router as tts_router
 from api.export  import router as export_router
+from auth.routes import router as auth_router
 from core.rag    import init_chroma
 
 
@@ -35,6 +36,7 @@ app.include_router(health_router,  prefix="/api")
 app.include_router(process_router, prefix="/api")
 app.include_router(tts_router,     prefix="/api")
 app.include_router(export_router,  prefix="/api")
+app.include_router(auth_router,    prefix="/api")
 
 
 @app.get("/")
