@@ -19,7 +19,7 @@ import main as main_module  # noqa: E402
 
 @pytest.fixture(scope="session", autouse=True)
 def _create_tables():
-    # from auth import models  # noqa: F401  (ensures tables are registered)  # TODO: uncomment in Task 2
+    from auth import models  # noqa: F401  (ensures tables are registered)
     SQLModel.metadata.create_all(engine)
     yield
     engine.dispose()
