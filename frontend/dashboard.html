@@ -84,12 +84,31 @@
         <button id="schedule-generate-btn" class="btn btn-primary btn-sm">Generate timetable</button>
         <span id="schedule-status" class="syllabus-status"></span>
       </div>
-      <table class="timetable" id="schedule-table" style="display:none;">
-        <thead>
-          <tr><th>#</th><th>Date</th><th>Chapter</th><th>Focus</th><th></th></tr>
-        </thead>
-        <tbody id="schedule-table-body"></tbody>
-      </table>
+      <div class="tt-progress" id="schedule-progress" style="display:none;">
+        <div class="tt-progress-bar"><div class="tt-progress-fill" id="schedule-progress-fill"></div></div>
+        <div class="tt-progress-text" id="schedule-progress-text"></div>
+      </div>
+
+      <div class="tt-calendar" id="schedule-calendar" style="display:none;">
+        <div class="tt-cal-header">
+          <button class="btn btn-ghost btn-sm" id="tt-cal-prev">←</button>
+          <span id="tt-cal-title" class="tt-cal-title"></span>
+          <button class="btn btn-ghost btn-sm" id="tt-cal-next">→</button>
+        </div>
+        <div class="tt-cal-grid" id="tt-cal-grid"></div>
+
+        <div class="tt-detail card" id="tt-detail" style="display:none;">
+          <div class="tt-detail-header">
+            <span id="tt-detail-title"></span>
+            <button class="btn btn-ghost btn-sm" id="tt-detail-close">✕</button>
+          </div>
+          <p id="tt-detail-focus" class="text-sm text-muted"></p>
+          <div class="syllabus-footer">
+            <button id="tt-detail-launch" class="btn btn-primary btn-sm">Launch this lesson</button>
+            <button id="tt-detail-remove" class="btn btn-ghost btn-sm">Remove</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

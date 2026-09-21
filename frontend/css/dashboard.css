@@ -130,29 +130,119 @@
   font-size: 0.85rem;
 }
 
-.timetable {
-  width: 100%;
-  border-collapse: collapse;
+.tt-progress {
   margin-top: 18px;
-  font-size: 0.85rem;
 }
 
-.timetable th {
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-accent);
+.tt-progress-bar {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.tt-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--transition);
+}
+
+.tt-progress-text {
+  margin-top: 8px;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  font-weight: 500;
-  font-size: 0.75rem;
+}
+
+.tt-calendar {
+  margin-top: 18px;
+}
+
+.tt-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.tt-cal-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.tt-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.tt-cal-dow {
+  text-align: center;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding-bottom: 6px;
 }
 
-.timetable td {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
+.tt-cal-day {
+  min-height: 64px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  padding: 6px;
+  font-size: 0.75rem;
+  cursor: default;
 }
 
-.timetable tr:last-child td {
-  border-bottom: none;
+.tt-cal-day.tt-empty {
+  border-color: transparent;
+  background: transparent;
+}
+
+.tt-cal-day .tt-cal-daynum {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+}
+
+.tt-cal-day.tt-has-class {
+  cursor: pointer;
+  border-color: var(--border-accent);
+}
+
+.tt-cal-day.tt-has-class:hover {
+  background: var(--bg-hover);
+}
+
+.tt-cal-day.tt-done {
+  opacity: 0.5;
+}
+
+.tt-cal-chip {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.tt-cal-day.tt-today {
+  border-color: var(--accent);
+}
+
+.tt-detail {
+  margin-top: 16px;
+}
+
+.tt-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  margin-bottom: 8px;
 }

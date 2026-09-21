@@ -92,6 +92,22 @@ if (resumeRaw) {
   }
 }
 
+// ── Launch a scheduled lesson from the dashboard calendar ──
+const launchRaw = sessionStorage.getItem('saathi-launch-topic');
+if (launchRaw) {
+  sessionStorage.removeItem('saathi-launch-topic');
+  try {
+    const launchEntry = JSON.parse(launchRaw);
+    beginSession(launchEntry.grade, launchEntry.subject);
+    const text = `explain ${launchEntry.chapter} to class ${launchEntry.grade}`;
+    transcriptText.textContent = text;
+    transcriptText.classList.remove('placeholder');
+    handleTranscript(text);
+  } catch (e) {
+    console.warn('Failed to launch scheduled lesson', e);
+  }
+}
+
 // ── STT setup ──
 function initSTT() {
   try {

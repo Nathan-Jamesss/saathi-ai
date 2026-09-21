@@ -129,10 +129,20 @@ async function uploadSyllabusPdf(grade, subject, file, textarea, statusEl) {
   }
 }
 
-// ── Class timetable ──
+// ── Class timetable (calendar) ──
+let scheduleRows = [];
+let calendarViewDate = new Date();
+
 function initSchedule() {
-  const generateBtn = document.getElementById('schedule-generate-btn');
-  generateBtn.addEventListener('click', onGenerateSchedule);
+  document.getElementById('schedule-generate-btn').addEventListener('click', onGenerateSchedule);
+  document.getElementById('tt-cal-prev').addEventListener('click', () => shiftCalendarMonth(-1));
+  document.getElementById('tt-cal-next').addEventListener('click', () => shiftCalendarMonth(1));
+  document.getElementById('tt-detail-close').addEventListener('click', closeDetail);
+}
+
+function shiftCalendarMonth(delta) {
+  calendarViewDate = new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + delta, 1);
+  renderCalendar();
 }
 
 async function onGenerateSchedule() {
@@ -182,33 +192,117 @@ async function loadSchedule(grade, subject) {
 }
 
 function renderSchedule(rows) {
-  const table = document.getElementById('schedule-table');
-  const body  = document.getElementById('schedule-table-body');
+  scheduleRows = rows;
+  const calendar = document.getElementById('schedule-calendar');
+  const progress = document.getElementById('schedule-progress');
+  closeDetail();
+
   if (rows.length === 0) {
-    table.style.display = 'none';
+    calendar.style.display = 'none';
+    progress.style.display = 'none';
     return;
   }
-  table.style.display = 'table';
-  body.innerHTML = '';
-  for (const row of rows) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.class_number}</td>
-      <td>${new Date(row.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</td>
-      <td>${row.chapter}</td>
-      <td>${row.focus}</td>
-      <td><button class="btn btn-ghost btn-sm delete-class-btn">Remove</button></td>
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const doneCount = rows.filter((r) => r.scheduled_date < todayStr).length;
+  const pct = Math.round((doneCount / rows.length) * 100);
+
+  progress.style.display = 'block';
+  document.getElementById('schedule-progress-fill').style.width = `${pct}%`;
+  document.getElementById('schedule-progress-text').textContent =
+    `${doneCount} of ${rows.length} classes done · ${rows.length - doneCount} remaining · ${pct}% of syllabus covered`;
+
+  calendar.style.display = 'block';
+
+  // Jump the calendar to the first upcoming class (or first class overall) on a fresh load.
+  const upcoming = rows.find((r) => r.scheduled_date >= todayStr) || rows[0];
+  const [y, m] = upcoming.scheduled_date.split('-').map(Number);
+  calendarViewDate = new Date(y, m - 1, 1);
+
+  renderCalendar();
+}
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function renderCalendar() {
+  const grid  = document.getElementById('tt-cal-grid');
+  const title = document.getElementById('tt-cal-title');
+  const year  = calendarViewDate.getFullYear();
+  const month = calendarViewDate.getMonth();
+
+  title.textContent = calendarViewDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+  const byDate = {};
+  for (const row of scheduleRows) {
+    (byDate[row.scheduled_date] ||= []).push(row);
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  grid.innerHTML = '';
+  for (const label of DOW) {
+    const el = document.createElement('div');
+    el.className = 'tt-cal-dow';
+    el.textContent = label;
+    grid.appendChild(el);
+  }
+  for (let i = 0; i < firstDow; i++) {
+    const el = document.createElement('div');
+    el.className = 'tt-cal-day tt-empty';
+    grid.appendChild(el);
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dayRows = byDate[dateStr] || [];
+    const cell = document.createElement('div');
+    cell.className = 'tt-cal-day';
+    if (dateStr === todayStr) cell.classList.add('tt-today');
+    if (dayRows.length > 0) {
+      cell.classList.add('tt-has-class');
+      if (dateStr < todayStr) cell.classList.add('tt-done');
+      cell.title = dayRows.map((r) => `${r.chapter} — ${r.focus}`).join('\n');
+      cell.addEventListener('click', () => openDetail(dayRows[0]));
+    }
+    cell.innerHTML = `
+      <div class="tt-cal-daynum">${day}</div>
+      ${dayRows.slice(0, 1).map((r) => `<div class="tt-cal-chip">${r.chapter}</div>`).join('')}
     `;
-    tr.querySelector('.delete-class-btn').addEventListener('click', () => deleteScheduleEntry(row.id, tr));
-    body.appendChild(tr);
+    grid.appendChild(cell);
   }
 }
 
-async function deleteScheduleEntry(id, tr) {
+function openDetail(row) {
+  const grade   = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+  const detail  = document.getElementById('tt-detail');
+
+  document.getElementById('tt-detail-title').textContent =
+    `Class ${row.class_number} · ${new Date(row.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} · ${row.chapter}`;
+  document.getElementById('tt-detail-focus').textContent = row.focus;
+
+  const launchBtn = document.getElementById('tt-detail-launch');
+  launchBtn.onclick = () => launchLesson(grade, subject, row.chapter);
+
+  const removeBtn = document.getElementById('tt-detail-remove');
+  removeBtn.onclick = () => deleteScheduleEntry(row.id);
+
+  detail.style.display = 'block';
+}
+
+function closeDetail() {
+  document.getElementById('tt-detail').style.display = 'none';
+}
+
+function launchLesson(grade, subject, chapter) {
+  sessionStorage.setItem('saathi-launch-topic', JSON.stringify({ grade: Number(grade), subject, chapter }));
+  location.href = 'app.html';
+}
+
+async function deleteScheduleEntry(id) {
   await authFetch(`/api/auth/me/schedule/${id}`, { method: 'DELETE' });
-  tr.remove();
-  const body = document.getElementById('schedule-table-body');
-  if (body.children.length === 0) {
-    document.getElementById('schedule-table').style.display = 'none';
-  }
+  const grade   = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+  await loadSchedule(grade, subject);
 }
