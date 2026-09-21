@@ -1,15 +1,17 @@
 """Auth routes: signup, login, profile"""
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import get_db
-from auth.models import Role, SessionHistory, Syllabus, User
+from auth.models import Role, ScheduledClass, SessionHistory, Syllabus, User
 from auth.security import create_token, hash_password, verify_password
 from auth.deps import get_current_user, require_admin
+from core.schedule import compute_class_dates, generate_schedule
+from core.syllabus_pdf import extract_syllabus_from_pdf
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -177,6 +179,147 @@ def save_syllabus(
     db.commit()
     db.refresh(row)
     return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
+
+
+@router.post("/me/syllabus/upload", response_model=SyllabusResponse)
+async def upload_syllabus_pdf(
+    grade: int = Form(...),
+    subject: str = Form(...),
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    pdf_bytes = await file.read()
+    content = extract_syllabus_from_pdf(pdf_bytes)
+
+    row = db.exec(
+        select(Syllabus).where(
+            Syllabus.user_id == user.id,
+            Syllabus.grade == grade,
+            Syllabus.subject == subject,
+        )
+    ).first()
+    if row:
+        row.content = content
+        row.updated_at = datetime.now(timezone.utc)
+    else:
+        row = Syllabus(user_id=user.id, grade=grade, subject=subject, content=content)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
+
+
+class ScheduleGenerateRequest(BaseModel):
+    grade: int
+    subject: str
+    start_date: date
+    end_date: date
+    classes_per_week: int
+
+
+class ScheduledClassResponse(BaseModel):
+    id: int
+    class_number: int
+    chapter: str
+    focus: str
+    scheduled_date: str
+
+
+def _schedule_response(row: ScheduledClass) -> ScheduledClassResponse:
+    return ScheduledClassResponse(
+        id=row.id,
+        class_number=row.class_number,
+        chapter=row.chapter,
+        focus=row.focus,
+        scheduled_date=row.scheduled_date,
+    )
+
+
+@router.post("/me/schedule/generate", response_model=List[ScheduledClassResponse])
+async def generate_class_schedule(
+    req: ScheduleGenerateRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    syllabus = db.exec(
+        select(Syllabus).where(
+            Syllabus.user_id == user.id,
+            Syllabus.grade == req.grade,
+            Syllabus.subject == req.subject,
+        )
+    ).first()
+    if not syllabus or not syllabus.content.strip():
+        raise HTTPException(status_code=400, detail="Save a syllabus for this grade/subject first")
+
+    class_dates = compute_class_dates(req.start_date, req.end_date, req.classes_per_week)
+    if not class_dates:
+        raise HTTPException(status_code=400, detail="No class dates fall in that range")
+
+    sessions = await generate_schedule(syllabus.content, req.grade, req.subject, class_dates)
+
+    existing = db.exec(
+        select(ScheduledClass).where(
+            ScheduledClass.user_id == user.id,
+            ScheduledClass.grade == req.grade,
+            ScheduledClass.subject == req.subject,
+        )
+    ).all()
+    for row in existing:
+        db.delete(row)
+    db.commit()
+
+    created = []
+    for i, (session, class_date) in enumerate(zip(sessions, class_dates), start=1):
+        row = ScheduledClass(
+            user_id=user.id,
+            grade=req.grade,
+            subject=req.subject,
+            class_number=i,
+            chapter=session.get("chapter", ""),
+            focus=session.get("focus", ""),
+            scheduled_date=class_date.isoformat(),
+        )
+        db.add(row)
+        created.append(row)
+    db.commit()
+    for row in created:
+        db.refresh(row)
+
+    return [_schedule_response(r) for r in created]
+
+
+@router.get("/me/schedule", response_model=List[ScheduledClassResponse])
+def list_schedule(
+    grade: int,
+    subject: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rows = db.exec(
+        select(ScheduledClass)
+        .where(
+            ScheduledClass.user_id == user.id,
+            ScheduledClass.grade == grade,
+            ScheduledClass.subject == subject,
+        )
+        .order_by(ScheduledClass.scheduled_date)
+    ).all()
+    return [_schedule_response(r) for r in rows]
+
+
+@router.delete("/me/schedule/{entry_id}")
+def delete_scheduled_class(
+    entry_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.get(ScheduledClass, entry_id)
+    if not row or row.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Not found")
+    db.delete(row)
+    db.commit()
+    return {"ok": True}
 
 
 class TeacherCreateRequest(BaseModel):

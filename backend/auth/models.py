@@ -40,6 +40,20 @@ class Syllabus(SQLModel, table=True):
     )
 
 
+class ScheduledClass(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    grade: int
+    subject: str
+    class_number: int
+    chapter: str
+    focus: str = ""
+    scheduled_date: str  # ISO date (YYYY-MM-DD)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
 class SessionHistory(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)

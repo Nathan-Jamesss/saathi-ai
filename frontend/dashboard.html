@@ -45,8 +45,51 @@
       <textarea id="syllabus-content" class="syllabus-textarea" placeholder="Chapters, topics, and pacing notes for this class — e.g.&#10;Ch 1: Matter in our surroundings&#10;Ch 2: Is matter around us pure&#10;..."></textarea>
       <div class="syllabus-footer">
         <button id="syllabus-save-btn" class="btn btn-primary btn-sm">Save syllabus</button>
+        <label class="btn btn-secondary btn-sm" for="syllabus-pdf-input" style="cursor:pointer;">
+          Upload NCERT PDF
+          <input type="file" id="syllabus-pdf-input" accept="application/pdf" style="display:none;" />
+        </label>
         <span id="syllabus-status" class="syllabus-status"></span>
       </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <h2>Class timetable</h2>
+    <div class="card">
+      <p class="text-sm text-muted" style="margin-bottom:14px;">
+        Generates a class-by-class schedule from the syllabus above (save or upload it first) for the selected grade/subject.
+      </p>
+      <div class="tt-controls">
+        <div class="tt-field">
+          <label for="schedule-start">Term start</label>
+          <input type="date" id="schedule-start" />
+        </div>
+        <div class="tt-field">
+          <label for="schedule-end">Term end</label>
+          <input type="date" id="schedule-end" />
+        </div>
+        <div class="tt-field">
+          <label for="schedule-per-week">Classes / week</label>
+          <select id="schedule-per-week">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+      </div>
+      <div class="syllabus-footer">
+        <button id="schedule-generate-btn" class="btn btn-primary btn-sm">Generate timetable</button>
+        <span id="schedule-status" class="syllabus-status"></span>
+      </div>
+      <table class="timetable" id="schedule-table" style="display:none;">
+        <thead>
+          <tr><th>#</th><th>Date</th><th>Chapter</th><th>Focus</th><th></th></tr>
+        </thead>
+        <tbody id="schedule-table-body"></tbody>
+      </table>
     </div>
   </div>
 
