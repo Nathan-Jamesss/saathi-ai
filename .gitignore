@@ -21,3 +21,6 @@ Thumbs.db
 
 # Render build artifacts
 *.log
+
+# Local dev DB (Postgres via DATABASE_URL in prod)
+backend/data/*.db

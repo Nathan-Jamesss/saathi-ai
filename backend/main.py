@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()  # loads .env when running locally; Render uses its own env vars
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlmodel import SQLModel
 
 from api.health  import router as health_router
 from api.process import router as process_router
@@ -13,11 +14,14 @@ from api.tts     import router as tts_router
 from api.export  import router as export_router
 from auth.routes import router as auth_router
 from core.rag    import init_chroma
+from db          import engine
+import auth.models  # noqa: F401  (registers tables on SQLModel.metadata)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """Initialize ChromaDB on startup."""
+    """Initialize ChromaDB and DB tables on startup."""
+    SQLModel.metadata.create_all(engine)
     init_chroma()
     yield
 
