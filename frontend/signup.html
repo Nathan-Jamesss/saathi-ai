@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saathi.AI · Sign up</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card card">
+    <h1>Create your teacher account</h1>
+    <form id="signup-form">
+      <div class="auth-field">
+        <label for="name">Name</label>
+        <input type="text" id="name" required autocomplete="name" />
+      </div>
+      <div class="auth-field">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email" />
+      </div>
+      <div class="auth-field">
+        <label for="school">School (optional)</label>
+        <input type="text" id="school" autocomplete="organization" />
+      </div>
+      <div class="auth-field">
+        <label for="password">Password</label>
+        <input type="password" id="password" required minlength="6" autocomplete="new-password" />
+      </div>
+      <button type="submit" class="btn btn-primary auth-submit">Sign up</button>
+      <div class="auth-error" id="error"></div>
+    </form>
+    <div class="auth-switch">
+      Already have an account? <a href="login.html">Log in</a>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { signup } from './js/auth.js';
+
+  const form = document.getElementById('signup-form');
+  const errorEl = document.getElementById('error');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.textContent = '';
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const school = document.getElementById('school').value.trim();
+    const password = document.getElementById('password').value;
+    try {
+      await signup({ email, password, name, school: school || null });
+      location.href = 'dashboard.html';
+    } catch (err) {
+      errorEl.textContent = err.message;
+    }
+  });
+</script>
+</body>
+</html>

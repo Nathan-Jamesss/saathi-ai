@@ -4,12 +4,20 @@ services:
     runtime: python
     rootDir: backend
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: GEMINI_API_KEYS
         sync: false            # set in Render dashboard (secret)
       - key: CHROMA_PERSIST_DIR
         value: ./data/chroma
+      - key: DATABASE_URL
+        sync: false            # set in Render dashboard — Postgres connection string
+      - key: JWT_SECRET
+        sync: false            # set in Render dashboard (secret, long random value)
+      - key: ADMIN_EMAIL
+        sync: false            # set in Render dashboard — used once by create_admin.py
+      - key: ADMIN_PASSWORD
+        sync: false            # set in Render dashboard — used once by create_admin.py
       - key: PYTHON_VERSION
         value: "3.11"
