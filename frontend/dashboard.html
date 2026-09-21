@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Saathi.AI · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+
+<div class="dash-page">
+  <div class="dash-header">
+    <h1>Welcome, <span id="teacher-name">Teacher</span></h1>
+    <div class="flex gap-12 items-center">
+      <a href="app.html" class="btn btn-primary">Launch classroom</a>
+      <button id="logout-btn" class="btn btn-ghost">Log out</button>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <h2>My syllabus</h2>
+    <div class="card">
+      <div class="syllabus-controls">
+        <select id="syllabus-grade">
+          <option value="8">Class 8</option>
+          <option value="9">Class 9</option>
+          <option value="10" selected>Class 10</option>
+          <option value="11">Class 11</option>
+          <option value="12">Class 12</option>
+        </select>
+        <select id="syllabus-subject">
+          <option value="science" selected>Science</option>
+          <option value="mathematics">Mathematics</option>
+          <option value="history">History</option>
+          <option value="geography">Geography</option>
+          <option value="political science">Political Science</option>
+          <option value="economics">Economics</option>
+          <option value="english">English</option>
+        </select>
+      </div>
+      <textarea id="syllabus-content" class="syllabus-textarea" placeholder="Chapters, topics, and pacing notes for this class — e.g.&#10;Ch 1: Matter in our surroundings&#10;Ch 2: Is matter around us pure&#10;..."></textarea>
+      <div class="syllabus-footer">
+        <button id="syllabus-save-btn" class="btn btn-primary btn-sm">Save syllabus</button>
+        <span id="syllabus-status" class="syllabus-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <h2>Session history</h2>
+    <div class="history-list" id="history-list">
+      <div class="history-empty">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
