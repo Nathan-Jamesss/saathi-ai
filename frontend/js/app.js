@@ -6,6 +6,11 @@ import { processTranscript, fetchTTS } from './api.js';
 import { renderPreview } from './renderer.js';
 import { DisplaySender } from './broadcast.js';
 import { exportSessionPDF } from './export.js';
+import { requireAuth } from './auth.js';
+
+if (!requireAuth('teacher')) {
+  throw new Error('redirecting to login');
+}
 
 // ── State ──
 let session = null;
@@ -51,15 +56,41 @@ const savedTheme = localStorage.getItem('saathi-theme') || 'dark';
 document.documentElement.setAttribute('data-theme', savedTheme);
 
 // ── Session Start ──
-beginBtn.addEventListener('click', () => {
-  session = createSession(gradeSelect.value, subjectSelect.value);
+function beginSession(grade, subject) {
+  session = createSession(grade, subject);
   sessionModal.style.display = 'none';
   appContainer.style.display = 'flex';
   topbarGrade.textContent   = `Class ${session.grade}`;
   topbarSubject.textContent = session.subject.charAt(0).toUpperCase() + session.subject.slice(1);
   initSTT();
   renderHistoryList();
+}
+
+beginBtn.addEventListener('click', () => {
+  beginSession(gradeSelect.value, subjectSelect.value);
 });
+
+// ── Resume from dashboard history ──
+const resumeRaw = sessionStorage.getItem('saathi-resume');
+if (resumeRaw) {
+  sessionStorage.removeItem('saathi-resume');
+  try {
+    const resumeEntry = JSON.parse(resumeRaw);
+    beginSession(resumeEntry.grade, resumeEntry.subject);
+    currentResponse = {
+      intent: resumeEntry.intent,
+      detected_language: resumeEntry.language,
+      topic: resumeEntry.topic,
+      grade: resumeEntry.grade,
+      subject: resumeEntry.subject,
+      content: resumeEntry.content_json,
+    };
+    currentHistoryIndex = -1;
+    showPreview(currentResponse);
+  } catch (e) {
+    console.warn('Failed to resume history entry', e);
+  }
+}
 
 // ── STT setup ──
 function initSTT() {

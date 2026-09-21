@@ -24,3 +24,4 @@ Thumbs.db
 
 # Local dev DB (Postgres via DATABASE_URL in prod)
 backend/data/*.db
+.gstack/

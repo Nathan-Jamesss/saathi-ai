@@ -1,15 +1,22 @@
 /* api.js · Backend API calls */
 
+import { getToken } from './auth.js';
+
 // Local dev uses localhost; deployed frontend uses the Render backend.
 // After deploy, replace the production URL with your actual Render service URL.
 const BACKEND_URL = ['localhost', '127.0.0.1'].includes(location.hostname)
   ? 'http://localhost:8000'
   : 'https://saathi-ai-hfqi.onrender.com';
 
+function authHeaders() {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function processTranscript(transcript, sessionContext, regenerate = false) {
   const res = await fetch(`${BACKEND_URL}/api/process`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ transcript, session: sessionContext, regenerate }),
     signal: AbortSignal.timeout(90000),  // cold-started server can take ~30-50s
   });
