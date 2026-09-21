@@ -1,4 +1,5 @@
 """Auth routes: signup, login, profile"""
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +7,7 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import get_db
-from auth.models import Role, SessionHistory, User
+from auth.models import Role, SessionHistory, Syllabus, User
 from auth.security import create_token, hash_password, verify_password
 from auth.deps import get_current_user, require_admin
 
@@ -121,6 +122,61 @@ def my_history(user: User = Depends(get_current_user), db: Session = Depends(get
         )
         for r in rows
     ]
+
+
+class SyllabusResponse(BaseModel):
+    grade: int
+    subject: str
+    content: str
+
+
+class SyllabusSaveRequest(BaseModel):
+    grade: int
+    subject: str
+    content: str
+
+
+@router.get("/me/syllabus", response_model=SyllabusResponse)
+def get_syllabus(
+    grade: int,
+    subject: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.exec(
+        select(Syllabus).where(
+            Syllabus.user_id == user.id,
+            Syllabus.grade == grade,
+            Syllabus.subject == subject,
+        )
+    ).first()
+    return SyllabusResponse(grade=grade, subject=subject, content=row.content if row else "")
+
+
+@router.put("/me/syllabus", response_model=SyllabusResponse)
+def save_syllabus(
+    req: SyllabusSaveRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = db.exec(
+        select(Syllabus).where(
+            Syllabus.user_id == user.id,
+            Syllabus.grade == req.grade,
+            Syllabus.subject == req.subject,
+        )
+    ).first()
+    if row:
+        row.content = req.content
+        row.updated_at = datetime.now(timezone.utc)
+    else:
+        row = Syllabus(
+            user_id=user.id, grade=req.grade, subject=req.subject, content=req.content
+        )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
 
 
 class TeacherCreateRequest(BaseModel):

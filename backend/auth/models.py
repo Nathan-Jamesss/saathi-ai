@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlmodel import SQLModel, Field
 
 
@@ -23,6 +23,19 @@ class User(SQLModel, table=True):
     subject_default: str = "science"
     is_active: bool = True
     created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
+class Syllabus(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("user_id", "grade", "subject"),)
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    grade: int
+    subject: str
+    content: str = ""
+    updated_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
 
