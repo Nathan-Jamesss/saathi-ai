@@ -195,11 +195,15 @@ function renderSchedule(rows) {
   scheduleRows = rows;
   const calendar = document.getElementById('schedule-calendar');
   const progress = document.getElementById('schedule-progress');
+  const bento = document.getElementById('bento-overview');
+  const bentoEmpty = document.getElementById('bento-empty');
   closeDetail();
 
   if (rows.length === 0) {
     calendar.style.display = 'none';
     progress.style.display = 'none';
+    bento.style.display = 'none';
+    bentoEmpty.style.display = 'block';
     return;
   }
 
@@ -212,6 +216,10 @@ function renderSchedule(rows) {
   document.getElementById('schedule-progress-text').textContent =
     `${doneCount} of ${rows.length} classes done · ${rows.length - doneCount} remaining · ${pct}% of syllabus covered`;
 
+  bentoEmpty.style.display = 'none';
+  bento.style.display = 'grid';
+  renderBentoOverview(rows, todayStr, doneCount, pct);
+
   calendar.style.display = 'block';
 
   // Jump the calendar to the first upcoming class (or first class overall) on a fresh load.
@@ -220,6 +228,38 @@ function renderSchedule(rows) {
   calendarViewDate = new Date(y, m - 1, 1);
 
   renderCalendar();
+}
+
+const RING_CIRCUMFERENCE = 263.9;
+
+function renderBentoOverview(rows, todayStr, doneCount, pct) {
+  const grade   = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+
+  const nextUp = rows.find((r) => r.scheduled_date >= todayStr);
+  const nextBody = document.getElementById('bento-next-body');
+
+  if (nextUp) {
+    const dateLabel = new Date(nextUp.scheduled_date + 'T00:00:00')
+      .toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    nextBody.innerHTML = `
+      <div class="bento-next-topic">${nextUp.chapter}</div>
+      <div class="bento-next-meta">Class ${nextUp.class_number} · ${dateLabel} · ${nextUp.focus}</div>
+      <button class="btn btn-primary btn-sm" id="bento-launch-btn">Launch this lesson</button>
+    `;
+    document.getElementById('bento-launch-btn').addEventListener('click', () =>
+      launchLesson(grade, subject, nextUp.chapter)
+    );
+  } else {
+    nextBody.innerHTML = `<div class="bento-next-empty">All ${rows.length} classes covered. Generate a new term to keep going.</div>`;
+  }
+
+  document.getElementById('bento-ring-text').textContent = `${pct}%`;
+  document.getElementById('bento-ring-fill').style.strokeDashoffset =
+    String(RING_CIRCUMFERENCE * (1 - pct / 100));
+
+  document.getElementById('bento-done-num').textContent = doneCount;
+  document.getElementById('bento-remaining-num').textContent = rows.length - doneCount;
 }
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
