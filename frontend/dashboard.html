@@ -22,6 +22,42 @@
   </div>
 
   <div class="dash-section">
+    <div class="bento-grid" id="bento-overview" style="display:none;">
+      <div class="bento-card bento-hero" id="bento-next-up">
+        <div class="bento-card-header">
+          <span class="bento-icon">▶</span>
+          <span class="bento-label">Continue teaching</span>
+        </div>
+        <div id="bento-next-body"></div>
+      </div>
+      <div class="bento-card">
+        <div class="bento-card-header">
+          <span class="bento-icon">◐</span>
+          <span class="bento-label">Syllabus covered</span>
+        </div>
+        <div class="bento-ring-wrap">
+          <svg class="bento-ring" viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="42" />
+            <circle class="ring-fill" id="bento-ring-fill" cx="50" cy="50" r="42" />
+          </svg>
+          <span class="bento-ring-text" id="bento-ring-text">0%</span>
+        </div>
+      </div>
+      <div class="bento-card">
+        <div class="bento-card-header">
+          <span class="bento-icon">✓</span>
+          <span class="bento-label">Classes</span>
+        </div>
+        <div class="bento-count-row">
+          <div><div class="bento-stat-num" id="bento-done-num">0</div><div class="bento-stat-label">done</div></div>
+          <div><div class="bento-stat-num" id="bento-remaining-num">0</div><div class="bento-stat-label">left</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="history-empty" id="bento-empty">No timetable yet — save a syllabus and generate one below to see your progress here.</div>
+  </div>
+
+  <div class="dash-section">
     <h2>My syllabus</h2>
     <div class="card">
       <div class="syllabus-controls">
