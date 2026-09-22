@@ -1,8 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
 
-from db import engine, get_db
+from auth import firestore_repo
 from auth.models import User, Role
 from auth.security import hash_password, create_token
 from auth.deps import get_current_user, require_admin, get_optional_user
@@ -26,12 +25,8 @@ def optional(user=Depends(get_optional_user)):
 
 
 def _make_user(role: Role, email: str) -> User:
-    with Session(engine) as db:
-        user = User(email=email, password_hash=hash_password("pw"), role=role, name="X")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return user
+    user = User(email=email, password_hash=hash_password("pw"), role=role, name="X")
+    return firestore_repo.create_user(user)
 
 
 def test_get_current_user_requires_token():
@@ -74,11 +69,7 @@ def test_optional_user_no_token_is_none():
 def test_deactivated_user_rejected():
     user = _make_user(Role.teacher, "deps-inactive@example.com")
     token = create_token(user.id, user.role.value)
-    with Session(engine) as db:
-        db_user = db.get(User, user.id)
-        db_user.is_active = False
-        db.add(db_user)
-        db.commit()
+    firestore_repo.update_user_fields(user.id, {"is_active": False})
     c = TestClient(_test_app)
     resp = c.get("/whoami", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 401

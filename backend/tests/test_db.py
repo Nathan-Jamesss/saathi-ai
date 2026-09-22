@@ -1,9 +1,8 @@
-from sqlalchemy import text
-from sqlmodel import Session
-from db import engine
+from firestore_db import get_client
 
 
-def test_engine_connects():
-    with Session(engine) as session:
-        result = session.exec(text("SELECT 1")).one()
-        assert result == (1,) or result == 1
+def test_firestore_client_connects():
+    client = get_client()
+    ref = client.collection("_connectivity_check").document("ping")
+    ref.set({"ok": True})
+    assert ref.get().to_dict() == {"ok": True}

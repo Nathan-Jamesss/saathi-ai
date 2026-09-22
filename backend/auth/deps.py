@@ -2,9 +2,8 @@
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException
-from sqlmodel import Session
 
-from db import get_db
+from auth import firestore_repo
 from auth.models import Role, User
 from auth.security import decode_token
 
@@ -15,10 +14,7 @@ def _extract_token(authorization: Optional[str]) -> Optional[str]:
     return authorization.removeprefix("Bearer ").strip()
 
 
-def get_optional_user(
-    authorization: Optional[str] = Header(default=None),
-    db: Session = Depends(get_db),
-) -> Optional[User]:
+def get_optional_user(authorization: Optional[str] = Header(default=None)) -> Optional[User]:
     token = _extract_token(authorization)
     if not token:
         return None
@@ -26,16 +22,13 @@ def get_optional_user(
         payload = decode_token(token)
     except Exception:
         return None
-    user = db.get(User, int(payload["sub"]))
+    user = firestore_repo.get_user(payload["sub"])
     if not user or not user.is_active:
         return None
     return user
 
 
-def get_current_user(
-    authorization: Optional[str] = Header(default=None),
-    db: Session = Depends(get_db),
-) -> User:
+def get_current_user(authorization: Optional[str] = Header(default=None)) -> User:
     token = _extract_token(authorization)
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
@@ -43,7 +36,7 @@ def get_current_user(
         payload = decode_token(token)
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    user = db.get(User, int(payload["sub"]))
+    user = firestore_repo.get_user(payload["sub"])
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
     return user

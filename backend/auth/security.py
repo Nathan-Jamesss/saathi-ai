@@ -20,7 +20,7 @@ def verify_password(password: str, password_hash: str) -> bool:
     return _pwd_ctx.verify(password, password_hash)
 
 
-def create_token(user_id: int, role: str) -> str:
+def create_token(user_id: str, role: str) -> str:
     payload = {
         "sub": str(user_id),
         "role": role,

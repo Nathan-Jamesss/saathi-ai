@@ -1,7 +1,5 @@
 from unittest.mock import AsyncMock, patch
 
-from sqlmodel import Session
-
 
 def _signup(client, email):
     resp = client.post(
@@ -78,8 +76,8 @@ def test_process_history_save_failure_does_not_fail_request(client):
     ), patch(
         "api.process.generate_concept",
         new=AsyncMock(return_value={"explanation": "water moves across membranes"}),
-    ), patch.object(
-        Session, "commit", side_effect=Exception("db unavailable")
+    ), patch(
+        "api.process.firestore_repo.save_history", side_effect=Exception("db unavailable")
     ):
         resp = client.post(
             "/api/process",

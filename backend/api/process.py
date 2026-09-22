@@ -16,9 +16,7 @@ from core.activity      import generate_activity
 
 from typing import Optional as OptionalType
 
-from sqlmodel import Session
-
-from db import get_db
+from auth import firestore_repo
 from auth.deps import get_optional_user
 from auth.models import SessionHistory, User
 
@@ -45,7 +43,6 @@ class ProcessRequest(BaseModel):
 async def process(
     req: ProcessRequest,
     user: OptionalType[User] = Depends(get_optional_user),
-    db: Session = Depends(get_db),
 ):
     transcript = req.transcript.strip()
     if not transcript:
@@ -111,7 +108,7 @@ async def process(
 
     if user:
         try:
-            db.add(
+            firestore_repo.save_history(
                 SessionHistory(
                     user_id=user.id,
                     intent=intent,
@@ -123,7 +120,6 @@ async def process(
                     rating=0,
                 )
             )
-            db.commit()
         except Exception:
             logger.warning(
                 "Failed to save session history for user %s", user.id, exc_info=True

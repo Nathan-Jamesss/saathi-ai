@@ -1,7 +1,4 @@
-from sqlmodel import Session, select
-
-from db import engine
-from auth.models import User
+from auth import firestore_repo
 
 
 def test_signup_creates_teacher_and_ignores_role_override(client):
@@ -78,13 +75,8 @@ def test_login_rejects_deactivated_user(client):
         "/api/auth/signup",
         json={"email": "deactivated@example.com", "password": "correct-pw", "name": "D"},
     )
-    with Session(engine) as session:
-        user = session.exec(
-            select(User).where(User.email == "deactivated@example.com")
-        ).first()
-        user.is_active = False
-        session.add(user)
-        session.commit()
+    user = firestore_repo.get_user_by_email("deactivated@example.com")
+    firestore_repo.update_user_fields(user.id, {"is_active": False})
 
     resp = client.post(
         "/api/auth/login",

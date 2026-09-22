@@ -1,13 +1,12 @@
-"""Auth routes: signup, login, profile"""
-from datetime import date, datetime, timezone
+"""Auth routes: signup, login, profile — Firestore-backed"""
+from datetime import date
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlmodel import Session, select
 
-from db import get_db
-from auth.models import Role, ScheduledClass, SessionHistory, Syllabus, User
+from auth import firestore_repo
+from auth.models import Role, ScheduledClass, User
 from auth.security import create_token, hash_password, verify_password
 from auth.deps import get_current_user, require_admin
 from core.schedule import compute_class_dates, generate_schedule
@@ -37,7 +36,7 @@ class TokenResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: int
+    id: str
     email: str
     name: str
     role: str
@@ -47,9 +46,8 @@ class UserResponse(BaseModel):
 
 
 @router.post("/signup", response_model=TokenResponse)
-def signup(req: SignupRequest, db: Session = Depends(get_db)):
-    existing = db.exec(select(User).where(User.email == req.email)).first()
-    if existing:
+def signup(req: SignupRequest):
+    if firestore_repo.get_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     user = User(
         email=req.email,
@@ -60,16 +58,14 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
         grade_default=req.grade_default,
         subject_default=req.subject_default,
     )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    user = firestore_repo.create_user(user)
     token = create_token(user.id, user.role.value)
     return TokenResponse(token=token, role=user.role.value, name=user.name)
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
-    user = db.exec(select(User).where(User.email == req.email)).first()
+def login(req: LoginRequest):
+    user = firestore_repo.get_user_by_email(req.email)
     if not user or not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     if not user.is_active:
@@ -92,7 +88,7 @@ def me(user: User = Depends(get_current_user)):
 
 
 class HistoryEntry(BaseModel):
-    id: int
+    id: str
     intent: str
     topic: Optional[str]
     grade: int
@@ -104,12 +100,8 @@ class HistoryEntry(BaseModel):
 
 
 @router.get("/me/history", response_model=List[HistoryEntry])
-def my_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.exec(
-        select(SessionHistory)
-        .where(SessionHistory.user_id == user.id)
-        .order_by(SessionHistory.created_at.desc())
-    ).all()
+def my_history(user: User = Depends(get_current_user)):
+    rows = firestore_repo.list_history(user.id)
     return [
         HistoryEntry(
             id=r.id,
@@ -139,45 +131,14 @@ class SyllabusSaveRequest(BaseModel):
 
 
 @router.get("/me/syllabus", response_model=SyllabusResponse)
-def get_syllabus(
-    grade: int,
-    subject: str,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    row = db.exec(
-        select(Syllabus).where(
-            Syllabus.user_id == user.id,
-            Syllabus.grade == grade,
-            Syllabus.subject == subject,
-        )
-    ).first()
+def get_syllabus(grade: int, subject: str, user: User = Depends(get_current_user)):
+    row = firestore_repo.get_syllabus(user.id, grade, subject)
     return SyllabusResponse(grade=grade, subject=subject, content=row.content if row else "")
 
 
 @router.put("/me/syllabus", response_model=SyllabusResponse)
-def save_syllabus(
-    req: SyllabusSaveRequest,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    row = db.exec(
-        select(Syllabus).where(
-            Syllabus.user_id == user.id,
-            Syllabus.grade == req.grade,
-            Syllabus.subject == req.subject,
-        )
-    ).first()
-    if row:
-        row.content = req.content
-        row.updated_at = datetime.now(timezone.utc)
-    else:
-        row = Syllabus(
-            user_id=user.id, grade=req.grade, subject=req.subject, content=req.content
-        )
-    db.add(row)
-    db.commit()
-    db.refresh(row)
+def save_syllabus(req: SyllabusSaveRequest, user: User = Depends(get_current_user)):
+    row = firestore_repo.save_syllabus(user.id, req.grade, req.subject, req.content)
     return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
 
 
@@ -187,26 +148,10 @@ async def upload_syllabus_pdf(
     subject: str = Form(...),
     file: UploadFile = File(...),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
     pdf_bytes = await file.read()
     content = extract_syllabus_from_pdf(pdf_bytes)
-
-    row = db.exec(
-        select(Syllabus).where(
-            Syllabus.user_id == user.id,
-            Syllabus.grade == grade,
-            Syllabus.subject == subject,
-        )
-    ).first()
-    if row:
-        row.content = content
-        row.updated_at = datetime.now(timezone.utc)
-    else:
-        row = Syllabus(user_id=user.id, grade=grade, subject=subject, content=content)
-    db.add(row)
-    db.commit()
-    db.refresh(row)
+    row = firestore_repo.save_syllabus(user.id, grade, subject, content)
     return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
 
 
@@ -219,7 +164,7 @@ class ScheduleGenerateRequest(BaseModel):
 
 
 class ScheduledClassResponse(BaseModel):
-    id: int
+    id: str
     class_number: int
     chapter: str
     focus: str
@@ -237,18 +182,8 @@ def _schedule_response(row: ScheduledClass) -> ScheduledClassResponse:
 
 
 @router.post("/me/schedule/generate", response_model=List[ScheduledClassResponse])
-async def generate_class_schedule(
-    req: ScheduleGenerateRequest,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    syllabus = db.exec(
-        select(Syllabus).where(
-            Syllabus.user_id == user.id,
-            Syllabus.grade == req.grade,
-            Syllabus.subject == req.subject,
-        )
-    ).first()
+async def generate_class_schedule(req: ScheduleGenerateRequest, user: User = Depends(get_current_user)):
+    syllabus = firestore_repo.get_syllabus(user.id, req.grade, req.subject)
     if not syllabus or not syllabus.content.strip():
         raise HTTPException(status_code=400, detail="Save a syllabus for this grade/subject first")
 
@@ -258,20 +193,10 @@ async def generate_class_schedule(
 
     sessions = await generate_schedule(syllabus.content, req.grade, req.subject, class_dates)
 
-    existing = db.exec(
-        select(ScheduledClass).where(
-            ScheduledClass.user_id == user.id,
-            ScheduledClass.grade == req.grade,
-            ScheduledClass.subject == req.subject,
-        )
-    ).all()
-    for row in existing:
-        db.delete(row)
-    db.commit()
+    firestore_repo.delete_schedule_for(user.id, req.grade, req.subject)
 
-    created = []
-    for i, (session, class_date) in enumerate(zip(sessions, class_dates), start=1):
-        row = ScheduledClass(
+    to_create = [
+        ScheduledClass(
             user_id=user.id,
             grade=req.grade,
             subject=req.subject,
@@ -280,45 +205,24 @@ async def generate_class_schedule(
             focus=session.get("focus", ""),
             scheduled_date=class_date.isoformat(),
         )
-        db.add(row)
-        created.append(row)
-    db.commit()
-    for row in created:
-        db.refresh(row)
-
+        for i, (session, class_date) in enumerate(zip(sessions, class_dates), start=1)
+    ]
+    created = firestore_repo.create_scheduled_classes(to_create)
     return [_schedule_response(r) for r in created]
 
 
 @router.get("/me/schedule", response_model=List[ScheduledClassResponse])
-def list_schedule(
-    grade: int,
-    subject: str,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    rows = db.exec(
-        select(ScheduledClass)
-        .where(
-            ScheduledClass.user_id == user.id,
-            ScheduledClass.grade == grade,
-            ScheduledClass.subject == subject,
-        )
-        .order_by(ScheduledClass.scheduled_date)
-    ).all()
+def list_schedule(grade: int, subject: str, user: User = Depends(get_current_user)):
+    rows = firestore_repo.list_schedule(user.id, grade, subject)
     return [_schedule_response(r) for r in rows]
 
 
 @router.delete("/me/schedule/{entry_id}")
-def delete_scheduled_class(
-    entry_id: int,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    row = db.get(ScheduledClass, entry_id)
+def delete_scheduled_class(entry_id: str, user: User = Depends(get_current_user)):
+    row = firestore_repo.get_scheduled_class(entry_id)
     if not row or row.user_id != user.id:
         raise HTTPException(status_code=404, detail="Not found")
-    db.delete(row)
-    db.commit()
+    firestore_repo.delete_scheduled_class(entry_id)
     return {"ok": True}
 
 
@@ -330,7 +234,7 @@ class TeacherCreateRequest(BaseModel):
 
 
 class TeacherResponse(BaseModel):
-    id: int
+    id: str
     email: str
     name: str
     is_active: bool
@@ -341,29 +245,19 @@ class TeacherPatchRequest(BaseModel):
     is_active: bool
 
 
-def _teacher_response(db: Session, teacher: User) -> TeacherResponse:
-    count = len(
-        db.exec(
-            select(SessionHistory).where(SessionHistory.user_id == teacher.id)
-        ).all()
-    )
+def _teacher_response(teacher: User) -> TeacherResponse:
     return TeacherResponse(
         id=teacher.id,
         email=teacher.email,
         name=teacher.name,
         is_active=teacher.is_active,
-        session_count=count,
+        session_count=firestore_repo.count_sessions_for_user(teacher.id),
     )
 
 
 @router.post("/admin/teachers", response_model=TeacherResponse)
-def admin_create_teacher(
-    req: TeacherCreateRequest,
-    _admin: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    existing = db.exec(select(User).where(User.email == req.email)).first()
-    if existing:
+def admin_create_teacher(req: TeacherCreateRequest, _admin: User = Depends(require_admin)):
+    if firestore_repo.get_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email already registered")
     teacher = User(
         email=req.email,
@@ -372,32 +266,20 @@ def admin_create_teacher(
         name=req.name,
         school=req.school,
     )
-    db.add(teacher)
-    db.commit()
-    db.refresh(teacher)
-    return _teacher_response(db, teacher)
+    teacher = firestore_repo.create_user(teacher)
+    return _teacher_response(teacher)
 
 
 @router.get("/admin/teachers", response_model=List[TeacherResponse])
-def admin_list_teachers(
-    _admin: User = Depends(require_admin), db: Session = Depends(get_db)
-):
-    teachers = db.exec(select(User).where(User.role == Role.teacher)).all()
-    return [_teacher_response(db, t) for t in teachers]
+def admin_list_teachers(_admin: User = Depends(require_admin)):
+    return [_teacher_response(t) for t in firestore_repo.list_teachers()]
 
 
 @router.patch("/admin/teachers/{teacher_id}", response_model=TeacherResponse)
-def admin_patch_teacher(
-    teacher_id: int,
-    req: TeacherPatchRequest,
-    _admin: User = Depends(require_admin),
-    db: Session = Depends(get_db),
-):
-    teacher = db.get(User, teacher_id)
+def admin_patch_teacher(teacher_id: str, req: TeacherPatchRequest, _admin: User = Depends(require_admin)):
+    teacher = firestore_repo.get_user(teacher_id)
     if not teacher or teacher.role != Role.teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
+    firestore_repo.update_user_fields(teacher_id, {"is_active": req.is_active})
     teacher.is_active = req.is_active
-    db.add(teacher)
-    db.commit()
-    db.refresh(teacher)
-    return _teacher_response(db, teacher)
+    return _teacher_response(teacher)

@@ -1,16 +1,12 @@
-from sqlmodel import Session
-
-from db import engine
+from auth import firestore_repo
 from auth.models import User, Role
 from auth.security import hash_password, create_token
 
 
 def _make_admin_token(email="admin-routes@example.com"):
-    with Session(engine) as db:
-        admin = User(email=email, password_hash=hash_password("pw"), role=Role.admin, name="Admin")
-        db.add(admin)
-        db.commit()
-        db.refresh(admin)
+    admin = firestore_repo.create_user(
+        User(email=email, password_hash=hash_password("pw"), role=Role.admin, name="Admin")
+    )
     return create_token(admin.id, "admin")
 
 
