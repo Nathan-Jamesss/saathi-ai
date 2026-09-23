@@ -335,6 +335,7 @@ class TeacherResponse(BaseModel):
     name: str
     is_active: bool
     session_count: int
+    last_active: Optional[str]
 
 
 class TeacherPatchRequest(BaseModel):
@@ -342,17 +343,66 @@ class TeacherPatchRequest(BaseModel):
 
 
 def _teacher_response(db: Session, teacher: User) -> TeacherResponse:
-    count = len(
-        db.exec(
-            select(SessionHistory).where(SessionHistory.user_id == teacher.id)
-        ).all()
-    )
+    sessions = db.exec(
+        select(SessionHistory).where(SessionHistory.user_id == teacher.id)
+    ).all()
+    last_active = max((s.created_at for s in sessions), default=None)
     return TeacherResponse(
         id=teacher.id,
         email=teacher.email,
         name=teacher.name,
         is_active=teacher.is_active,
-        session_count=count,
+        session_count=len(sessions),
+        last_active=last_active.isoformat() if last_active else None,
+    )
+
+
+GRADES = [8, 9, 10, 11, 12]
+SUBJECTS = ["science", "mathematics", "history", "geography", "political science", "economics", "english"]
+
+
+class CoverageCell(BaseModel):
+    grade: int
+    subject: str
+    teachers: List[str]
+
+
+class AdminOverviewResponse(BaseModel):
+    total_teachers: int
+    active_teachers: int
+    total_sessions: int
+    total_scheduled_classes: int
+    coverage: List[CoverageCell]
+
+
+@router.get("/admin/overview", response_model=AdminOverviewResponse)
+def admin_overview(_admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    teachers = db.exec(select(User).where(User.role == Role.teacher)).all()
+    user_by_id = {t.id: t for t in teachers}
+
+    syllabus_rows = db.exec(select(Syllabus)).all()
+    coverage_map: dict = {}
+    for row in syllabus_rows:
+        teacher = user_by_id.get(row.user_id)
+        if not teacher:
+            continue
+        key = (row.grade, row.subject)
+        names = coverage_map.setdefault(key, [])
+        if teacher.name not in names:
+            names.append(teacher.name)
+
+    coverage = [
+        CoverageCell(grade=grade, subject=subject, teachers=coverage_map.get((grade, subject), []))
+        for grade in GRADES
+        for subject in SUBJECTS
+    ]
+
+    return AdminOverviewResponse(
+        total_teachers=len(teachers),
+        active_teachers=sum(1 for t in teachers if t.is_active),
+        total_sessions=len(db.exec(select(SessionHistory)).all()),
+        total_scheduled_classes=len(db.exec(select(ScheduledClass)).all()),
+        coverage=coverage,
     )
 
 

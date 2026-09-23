@@ -3,14 +3,15 @@
    ========================================================= */
 
 :root {
-  --bg:        #060608;
-  --ink:       #f4f2ee;
-  --ink-dim:   #a7a5a0;
-  --ink-faint: #6a6862;
-  --glass:     rgba(255, 255, 255, 0.06);
-  --glass-2:   rgba(255, 255, 255, 0.10);
-  --glass-br:  rgba(255, 255, 255, 0.14);
-  --font-d: 'Inter Tight', sans-serif;
+  --bg:        #1a2620;
+  --ink:       #f6f1e4;
+  --ink-dim:   #b9c4bc;
+  --ink-faint: #7c8a82;
+  --glass:     rgba(246, 241, 228, 0.07);
+  --glass-2:   rgba(246, 241, 228, 0.11);
+  --glass-br:  rgba(246, 241, 228, 0.16);
+  --accent:    #4cc38a;
+  --font-d: 'Baloo 2', sans-serif;
   --font-b: 'Inter', 'Noto Sans Malayalam', 'Noto Sans Devanagari', sans-serif;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -37,8 +38,8 @@ a { color: inherit; text-decoration: none; }
 .veil {
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
   background:
-    radial-gradient(120% 90% at 50% 0%, transparent 40%, rgba(6,6,8,0.55) 100%),
-    linear-gradient(180deg, rgba(6,6,8,0.35), rgba(6,6,8,0.65));
+    radial-gradient(120% 90% at 50% 0%, transparent 40%, rgba(26,38,32,0.55) 100%),
+    linear-gradient(180deg, rgba(26,38,32,0.35), rgba(26,38,32,0.65));
 }
 
 /* glass primitive */
@@ -76,20 +77,19 @@ a { color: inherit; text-decoration: none; }
 }
 .hero-inner { max-width: 720px; display: flex; flex-direction: column; align-items: center; }
 .eyebrow {
-  font-size: 0.72rem; letter-spacing: 0.32em; text-transform: uppercase;
-  color: var(--ink-dim); margin-bottom: 26px;
+  font-size: 1rem; color: var(--ink-dim); margin-bottom: 18px;
   opacity: 0; animation: rise 0.9s var(--ease) 0.1s forwards;
 }
 .title {
   font-family: var(--font-d);
   font-size: clamp(4rem, 16vw, 11rem);
-  font-weight: 300; letter-spacing: -0.05em; line-height: 0.9;
+  font-weight: 700; line-height: 0.95;
   opacity: 0; animation: rise 1s var(--ease) 0.18s forwards;
 }
-.title span { color: var(--ink-dim); }
+.title span { color: var(--accent); }
 .langs {
   display: flex; gap: 16px; align-items: center; justify-content: center;
-  font-family: var(--font-d); font-size: clamp(1.1rem, 3vw, 1.7rem); font-weight: 300;
+  font-family: var(--font-d); font-size: clamp(1.1rem, 3vw, 1.7rem); font-weight: 600;
   color: var(--ink); margin: 26px 0 22px;
   opacity: 0; animation: rise 1s var(--ease) 0.3s forwards;
 }

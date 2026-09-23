@@ -6,7 +6,7 @@
   <title>Saathi.AI · Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
   <link rel="stylesheet" href="css/auth.css" />
@@ -17,6 +17,34 @@
   <div class="dash-header">
     <h1>Admin</h1>
     <button id="logout-btn" class="btn btn-ghost">Log out</button>
+  </div>
+
+  <div class="dash-section">
+    <div class="bento-grid" id="admin-stats">
+      <div class="bento-card">
+        <div class="bento-card-header"><span class="bento-icon">✓</span><span class="bento-label">Teachers</span></div>
+        <div class="bento-count-row">
+          <div><div class="bento-stat-num" id="stat-total-teachers">0</div><div class="bento-stat-label">total</div></div>
+          <div><div class="bento-stat-num" id="stat-active-teachers">0</div><div class="bento-stat-label">active</div></div>
+        </div>
+      </div>
+      <div class="bento-card">
+        <div class="bento-card-header"><span class="bento-icon">▶</span><span class="bento-label">AI sessions</span></div>
+        <div class="bento-stat-num" id="stat-total-sessions" style="text-align:center;">0</div>
+      </div>
+      <div class="bento-card">
+        <div class="bento-card-header"><span class="bento-icon">◐</span><span class="bento-label">Classes scheduled</span></div>
+        <div class="bento-stat-num" id="stat-total-scheduled" style="text-align:center;">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <h2>Grade &amp; subject coverage</h2>
+    <p class="text-sm text-muted" style="margin-bottom:14px;">Which teachers have prepared a syllabus for each grade and subject. Empty cells are gaps with no teacher currently assigned.</p>
+    <div class="card" style="overflow-x:auto;">
+      <table class="coverage-table" id="coverage-table"></table>
+    </div>
   </div>
 
   <div class="dash-section">

@@ -1,60 +1,66 @@
 /* =========================================================
    Saathi.AI · Design System (main.css)
-   Luxury editorial · monochrome · hairline borders
+   Notebook paper by day, chalkboard by night
    Shared by Teacher View (app) and Projector (display)
    ========================================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&family=Noto+Sans+Malayalam:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@300;400;500;600&family=Noto+Sans+Malayalam:wght@400;600&family=Noto+Sans+Devanagari:wght@400;600&display=swap');
 
 /* ── CSS Variables ── */
 :root {
-  /* Dark (default) · near-black canvas, warm off-white ink */
-  --bg-primary:   #0a0a0a;
-  --bg-secondary: #111111;
-  --bg-card:      #151515;
-  --bg-hover:     #1c1c1c;
-  --text-primary:   #f2f0eb;
-  --text-secondary: #8a8884;
-  --text-muted:     #56544f;
-  --accent:       #f2f0eb;          /* monochrome · the ink is the accent */
-  --accent-hover: #ffffff;
-  --accent-ink:   #0a0a0a;          /* text on accent-filled surfaces */
-  --accent-light: rgba(242, 240, 235, 0.07);
-  --success: #7fd1a0;
-  --warning: #e3c275;
-  --danger:  #e89393;
-  --border:        rgba(242, 240, 235, 0.12);
-  --border-accent: rgba(242, 240, 235, 0.32);
-  --shadow:    0 16px 48px rgba(0, 0, 0, 0.5);
-  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --radius:    5px;
-  --radius-sm: 3px;
-  --radius-lg: 8px;
+  /* Dark (default) · slate chalkboard, chalk-white ink, bright chalk accents */
+  --bg-primary:   #21302a;
+  --bg-secondary: #1a2620;
+  --bg-card:      #24352d;
+  --bg-hover:     #2c4038;
+  --text-primary:   #f6f1e4;
+  --text-secondary: #b9c4bc;
+  --text-muted:     #7c8a82;
+  --accent:       #4cc38a;          /* chalk green */
+  --accent-hover: #63d89e;
+  --accent-ink:   #14231c;          /* text on accent-filled surfaces */
+  --accent-light: rgba(76, 195, 138, 0.16);
+  --secondary:    #ffb13c;          /* marigold */
+  --sky:          #5cb8ff;
+  --pink:         #ff8fb3;
+  --success: #4cc38a;
+  --warning: #ffb13c;
+  --danger:  #ff7a6b;
+  --border:        rgba(246, 241, 228, 0.14);
+  --border-accent: rgba(246, 241, 228, 0.34);
+  --shadow:    0 16px 40px rgba(10, 18, 14, 0.45);
+  --shadow-sm: 0 4px 14px rgba(10, 18, 14, 0.35);
+  --radius:    14px;
+  --radius-sm: 10px;
+  --radius-lg: 20px;
   --transition: 220ms cubic-bezier(0.22, 1, 0.36, 1);
-  --font-display: 'Inter Tight', 'Inter', sans-serif;
+  --font-display: 'Baloo 2', 'Inter', sans-serif;
   --font-body:    'Inter', 'Noto Sans Malayalam', 'Noto Sans Devanagari', sans-serif;
 }
 
 [data-theme="light"] {
-  /* Light · warm paper, near-black ink */
-  --bg-primary:   #f4f2ed;
-  --bg-secondary: #eceae3;
+  /* Light · warm notebook paper, pencil-brown ink, bright chalk accents */
+  --bg-primary:   #fff8ec;
+  --bg-secondary: #fbf0dc;
   --bg-card:      #ffffff;
-  --bg-hover:     #e6e3da;
-  --text-primary:   #14130f;
-  --text-secondary: #5c5a54;
-  --text-muted:     #9a978f;
-  --accent:       #14130f;
-  --accent-hover: #000000;
-  --accent-ink:   #f4f2ed;
-  --accent-light: rgba(20, 19, 15, 0.06);
-  --success: #2f8f5b;
-  --warning: #b07d18;
-  --danger:  #c0504a;
-  --border:        rgba(20, 19, 15, 0.14);
-  --border-accent: rgba(20, 19, 15, 0.34);
-  --shadow:    0 16px 48px rgba(0, 0, 0, 0.12);
-  --shadow-sm: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --bg-hover:     #fdefd8;
+  --text-primary:   #2b2118;
+  --text-secondary: #6b5d4f;
+  --text-muted:     #a69a89;
+  --accent:       #2fa36b;
+  --accent-hover: #268a5a;
+  --accent-ink:   #ffffff;
+  --accent-light: rgba(47, 163, 107, 0.12);
+  --secondary:    #ff9f1c;
+  --sky:          #3fa9f5;
+  --pink:         #ff6fa8;
+  --success: #2fa36b;
+  --warning: #e08e00;
+  --danger:  #e1503f;
+  --border:        rgba(43, 33, 24, 0.13);
+  --border-accent: rgba(43, 33, 24, 0.30);
+  --shadow:    0 16px 40px rgba(107, 74, 26, 0.14);
+  --shadow-sm: 0 4px 14px rgba(107, 74, 26, 0.10);
 }
 
 /* ── Reset ── */
@@ -82,9 +88,8 @@ body {
 /* ── Typography ── */
 h1, h2, h3, h4, h5 {
   font-family: var(--font-display);
-  font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  line-height: 1.15;
 }
 h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
 h2 { font-size: clamp(1.5rem, 3vw, 2.25rem); }
@@ -115,11 +120,12 @@ a:hover { opacity: 0.7; }
 .btn-primary {
   background: var(--accent);
   color: var(--accent-ink);
+  font-weight: 600;
 }
 .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
 .btn-secondary {
-  background: transparent;
+  background: var(--bg-card);
   color: var(--text-primary);
   border-color: var(--border);
 }
@@ -139,8 +145,8 @@ a:hover { opacity: 0.7; }
 }
 .btn-danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 
-.btn-lg { padding: 15px 30px; font-size: 0.9rem; letter-spacing: 0.04em; }
-.btn-sm { padding: 6px 14px; font-size: 0.75rem; }
+.btn-lg { padding: 15px 30px; font-size: 0.95rem; }
+.btn-sm { padding: 7px 16px; font-size: 0.8rem; }
 .btn-icon { padding: 8px; border-radius: var(--radius-sm); }
 
 .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none !important; }
@@ -151,30 +157,29 @@ a:hover { opacity: 0.7; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 22px;
-  transition: background var(--transition), border-color var(--transition);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
 }
-.card-hover:hover { background: var(--bg-hover); border-color: var(--border-accent); }
+.card-hover:hover { background: var(--bg-hover); border-color: var(--border-accent); transform: translateY(-2px); }
 
 /* ── Badge ── */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 12px;
-  border: 1px solid var(--border);
+  padding: 5px 13px;
+  border: 1px solid transparent;
   border-radius: 100px;
-  font-size: 0.68rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--text-secondary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-primary);
   background: var(--accent-light);
 }
-.badge-concept,
-.badge-quiz,
-.badge-translate,
-.badge-activity,
-.badge-unclear { color: var(--text-secondary); }
+.badge-concept   { color: var(--accent-ink);  background: var(--accent); }
+.badge-quiz      { color: var(--accent-ink);  background: var(--secondary); }
+.badge-translate { color: var(--accent-ink);  background: var(--sky); }
+.badge-activity  { color: var(--accent-ink);  background: var(--pink); }
+.badge-unclear   { color: var(--text-secondary); background: var(--accent-light); }
 
 /* ── Spinner ── */
 .spinner {

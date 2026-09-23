@@ -306,7 +306,7 @@
   border-radius: 4px;
   transition: background var(--transition);
 }
-.quiz-option.correct { background: rgba(34,197,94,0.15); color: var(--success); font-weight: 600; }
+.quiz-option.correct { background: rgba(76,195,138,0.18); color: var(--success); font-weight: 600; }
 .quiz-answer { display: none; font-size: 0.78rem; color: var(--success); margin-top: 8px; border-top: 1px solid var(--border); padding-top: 8px; }
 .show-answers-toggle { font-size: 0.75rem; }
 
@@ -379,8 +379,8 @@
   transition: all var(--transition);
 }
 .feedback-btn:hover { background: var(--bg-hover); }
-.feedback-btn.active-up   { border-color: var(--success); color: var(--success); background: rgba(34,197,94,0.1); }
-.feedback-btn.active-down { border-color: var(--danger);  color: var(--danger);  background: rgba(239,68,68,0.1); }
+.feedback-btn.active-up   { border-color: var(--success); color: var(--success); background: rgba(76,195,138,0.14); }
+.feedback-btn.active-down { border-color: var(--danger);  color: var(--danger);  background: rgba(255,122,107,0.14); }
 
 /* ── Session History Sidebar ── */
 .history-sidebar {
@@ -730,8 +730,8 @@ body { background: transparent; }
 .app-container { position: relative; z-index: 1; }
 /* let the central preview area reveal the noise faintly */
 .preview-pane { background: transparent; }
-.app-left { background: rgba(10,10,10,0.35); backdrop-filter: blur(6px); }
-[data-theme="light"] .app-left { background: rgba(244,242,237,0.45); }
+.app-left { background: rgba(26,38,32,0.4); backdrop-filter: blur(6px); }
+[data-theme="light"] .app-left { background: rgba(255,248,236,0.55); }
 
 /* glass session modal */
 .modal-overlay { z-index: 500; }

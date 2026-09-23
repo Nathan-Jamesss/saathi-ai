@@ -44,7 +44,7 @@ body.display-body {
   letter-spacing: -0.03em;
   color: var(--text-primary);
 }
-.display-connecting .app-name span { color: var(--text-muted); }
+.display-connecting .app-name span { color: var(--accent); }
 .display-connecting p {
   font-size: 1.1rem;
   font-weight: 300;
