@@ -95,6 +95,7 @@
     <div class="card">
       <p class="text-sm text-muted" style="margin-bottom:14px;">
         Generates a class-by-class schedule from the syllabus above (save or upload it first) for the selected grade/subject.
+        Upload your school's own timetable and classes land on the real days that class meets, instead of evenly spread guesses.
       </p>
       <div class="tt-controls">
         <div class="tt-field">
@@ -115,6 +116,13 @@
             <option value="5">5</option>
           </select>
         </div>
+      </div>
+      <div class="syllabus-footer">
+        <label class="btn btn-secondary btn-sm" for="school-timetable-input" style="cursor:pointer;">
+          Upload school timetable
+          <input type="file" id="school-timetable-input" accept="application/pdf,image/*" style="display:none;" />
+        </label>
+        <span id="school-timetable-status" class="syllabus-status"></span>
       </div>
       <div class="syllabus-footer">
         <button id="schedule-generate-btn" class="btn btn-primary btn-sm">Generate timetable</button>

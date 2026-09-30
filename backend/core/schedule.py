@@ -3,7 +3,7 @@ Gemini only maps syllabus chapters onto the computed class slots."""
 
 import json
 from datetime import date, timedelta
-from typing import List
+from typing import List, Optional
 
 from google.genai import types
 
@@ -36,9 +36,19 @@ def _safe_parse(text: str) -> list:
         return json.loads(cleaned)
 
 
-def compute_class_dates(start_date: date, end_date: date, classes_per_week: int) -> List[date]:
-    classes_per_week = max(1, min(7, classes_per_week))
-    weekdays = sorted({(i * 7 // classes_per_week) % 7 for i in range(classes_per_week)})
+def compute_class_dates(
+    start_date: date,
+    end_date: date,
+    classes_per_week: int,
+    weekdays: Optional[List[int]] = None,
+) -> List[date]:
+    """Real weekdays off the school's timetable win; otherwise spread
+    classes_per_week evenly across the week."""
+    if weekdays:
+        weekdays = sorted({d for d in weekdays if 0 <= d <= 6})
+    else:
+        classes_per_week = max(1, min(7, classes_per_week))
+        weekdays = sorted({(i * 7 // classes_per_week) % 7 for i in range(classes_per_week)})
 
     dates = []
     day = start_date

@@ -9,8 +9,136 @@ if (requireAuth('admin')) {
 async function init() {
   document.getElementById('logout-btn').addEventListener('click', logout);
   document.getElementById('add-teacher-form').addEventListener('submit', onAddTeacher);
+  document.getElementById('admin-sched-days').addEventListener('change', loadAdminSchedule);
+  document.getElementById('admin-add-class-form').addEventListener('submit', onAddClass);
   await loadOverview();
   await loadTeachers();
+  await loadAdminSchedule();
+}
+
+// ── Upcoming classes across all teachers ──
+function formatDate(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {
+    weekday: 'short', month: 'short', day: 'numeric',
+  });
+}
+
+async function loadAdminSchedule() {
+  const days = document.getElementById('admin-sched-days').value;
+  const table = document.getElementById('admin-schedule-table');
+  const empty = document.getElementById('admin-schedule-empty');
+
+  const res = await authFetch(`/api/auth/admin/schedule?days=${days}`);
+  if (!res.ok) {
+    table.innerHTML = '';
+    empty.textContent = 'Could not load the schedule.';
+    empty.style.display = 'block';
+    return;
+  }
+
+  const rows = await res.json();
+  if (rows.length === 0) {
+    table.innerHTML = '';
+    empty.textContent = 'No classes scheduled in this window.';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  table.innerHTML = `
+    <thead><tr>
+      <th>Date</th><th>Teacher</th><th>Class</th><th>Chapter</th><th>Focus</th><th></th>
+    </tr></thead>
+    <tbody></tbody>
+  `;
+  const body = table.querySelector('tbody');
+  for (const row of rows) {
+    body.appendChild(buildScheduleRow(row));
+  }
+}
+
+function buildScheduleRow(row) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${formatDate(row.scheduled_date)}</td>
+    <td>${row.teacher_name}</td>
+    <td>Class ${row.grade} · ${row.subject}</td>
+    <td>${row.chapter}</td>
+    <td>${row.focus}</td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-secondary btn-sm edit-btn">Edit</button>
+      <button class="btn btn-ghost btn-sm del-btn">Remove</button>
+    </td>
+  `;
+  tr.querySelector('.edit-btn').addEventListener('click', () => startEditRow(tr, row));
+  tr.querySelector('.del-btn').addEventListener('click', () => deleteClass(row.id));
+  return tr;
+}
+
+function startEditRow(tr, row) {
+  tr.innerHTML = `
+    <td><input type="date" class="edit-date" value="${row.scheduled_date}" /></td>
+    <td>${row.teacher_name}</td>
+    <td>Class ${row.grade} · ${row.subject}</td>
+    <td><input type="text" class="edit-chapter" value="${row.chapter.replace(/"/g, '&quot;')}" /></td>
+    <td><input type="text" class="edit-focus" value="${row.focus.replace(/"/g, '&quot;')}" /></td>
+    <td style="white-space:nowrap;">
+      <button class="btn btn-primary btn-sm save-btn">Save</button>
+      <button class="btn btn-ghost btn-sm cancel-btn">Cancel</button>
+    </td>
+  `;
+  tr.querySelector('.cancel-btn').addEventListener('click', () => {
+    tr.replaceWith(buildScheduleRow(row));
+  });
+  tr.querySelector('.save-btn').addEventListener('click', async () => {
+    const updated = {
+      chapter: tr.querySelector('.edit-chapter').value.trim(),
+      focus: tr.querySelector('.edit-focus').value.trim(),
+      scheduled_date: tr.querySelector('.edit-date').value,
+    };
+    const res = await authFetch(`/api/auth/admin/schedule/${row.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated),
+    });
+    if (res.ok) {
+      await loadAdminSchedule();
+    }
+  });
+}
+
+async function deleteClass(id) {
+  await authFetch(`/api/auth/admin/schedule/${id}`, { method: 'DELETE' });
+  await loadAdminSchedule();
+}
+
+async function onAddClass(e) {
+  e.preventDefault();
+  const statusEl = document.getElementById('admin-add-class-status');
+  statusEl.textContent = 'Adding…';
+
+  const res = await authFetch('/api/auth/admin/schedule', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      teacher_id: Number(document.getElementById('ac-teacher').value),
+      grade: Number(document.getElementById('ac-grade').value),
+      subject: document.getElementById('ac-subject').value,
+      chapter: document.getElementById('ac-chapter').value.trim(),
+      focus: document.getElementById('ac-focus').value.trim(),
+      scheduled_date: document.getElementById('ac-date').value,
+    }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    statusEl.textContent = data.detail || 'Could not add the class';
+    return;
+  }
+  e.target.reset();
+  statusEl.textContent = 'Added.';
+  setTimeout(() => { if (statusEl.textContent === 'Added.') statusEl.textContent = ''; }, 2000);
+  await loadAdminSchedule();
 }
 
 async function loadOverview() {
@@ -65,6 +193,11 @@ async function loadTeachers() {
     listEl.innerHTML = '<div class="history-empty">No teachers yet.</div>';
     return;
   }
+  const teacherSelect = document.getElementById('ac-teacher');
+  teacherSelect.innerHTML = teachers
+    .map((t) => `<option value="${t.id}">${t.name} (${t.email})</option>`)
+    .join('');
+
   listEl.innerHTML = '';
   for (const t of teachers) {
     const lastActive = t.last_active

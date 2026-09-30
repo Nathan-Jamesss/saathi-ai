@@ -48,6 +48,78 @@
   </div>
 
   <div class="dash-section">
+    <h2>Upcoming classes</h2>
+    <p class="text-sm text-muted" style="margin-bottom:14px;">
+      What every teacher is teaching over the next few days. Edits here show up in that teacher's own dashboard and calendar.
+    </p>
+    <div class="card">
+      <div class="tt-controls">
+        <div class="tt-field">
+          <label for="admin-sched-days">Show next</label>
+          <select id="admin-sched-days">
+            <option value="1">1 day</option>
+            <option value="3">3 days</option>
+            <option value="7" selected>7 days</option>
+            <option value="30">30 days</option>
+          </select>
+        </div>
+      </div>
+      <table class="coverage-table" id="admin-schedule-table"></table>
+      <div id="admin-schedule-empty" class="history-empty">No classes scheduled in this window.</div>
+
+      <h3 style="font-size:0.95rem; margin:24px 0 10px;">Add a class</h3>
+      <form id="admin-add-class-form">
+        <div class="tt-controls">
+          <div class="tt-field">
+            <label for="ac-teacher">Teacher</label>
+            <select id="ac-teacher" required></select>
+          </div>
+          <div class="tt-field">
+            <label for="ac-grade">Class</label>
+            <select id="ac-grade">
+              <option value="8">Class 8</option>
+              <option value="9">Class 9</option>
+              <option value="10" selected>Class 10</option>
+              <option value="11">Class 11</option>
+              <option value="12">Class 12</option>
+            </select>
+          </div>
+          <div class="tt-field">
+            <label for="ac-subject">Subject</label>
+            <select id="ac-subject">
+              <option value="science" selected>Science</option>
+              <option value="mathematics">Mathematics</option>
+              <option value="history">History</option>
+              <option value="geography">Geography</option>
+              <option value="political science">Political Science</option>
+              <option value="economics">Economics</option>
+              <option value="english">English</option>
+            </select>
+          </div>
+          <div class="tt-field">
+            <label for="ac-date">Date</label>
+            <input type="date" id="ac-date" required />
+          </div>
+        </div>
+        <div class="tt-controls">
+          <div class="tt-field" style="flex:1;">
+            <label for="ac-chapter">Chapter</label>
+            <input type="text" id="ac-chapter" required placeholder="e.g. Chapter 3: Gravitation" />
+          </div>
+          <div class="tt-field" style="flex:1;">
+            <label for="ac-focus">Focus (optional)</label>
+            <input type="text" id="ac-focus" placeholder="What this session covers" />
+          </div>
+        </div>
+        <div class="syllabus-footer">
+          <button type="submit" class="btn btn-primary btn-sm">Add class</button>
+          <span id="admin-add-class-status" class="syllabus-status"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="dash-section">
     <h2>Add teacher</h2>
     <form id="add-teacher-form" class="card" style="max-width: 400px;">
       <div class="auth-field">

@@ -40,6 +40,24 @@ class Syllabus(SQLModel, table=True):
     )
 
 
+class TeacherTimetable(SQLModel, table=True):
+    """The real weekly slots a grade/subject actually meets, read off the
+    school's own timetable sheet — so generated schedules land on real class
+    days instead of evenly-spread guesses."""
+
+    __table_args__ = (UniqueConstraint("user_id", "grade", "subject"),)
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    grade: int
+    subject: str
+    weekdays: str = ""  # comma-separated Python weekday numbers, Monday=0
+    note: str = ""
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
 class ScheduledClass(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", index=True)

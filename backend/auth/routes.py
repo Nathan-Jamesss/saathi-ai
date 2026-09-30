@@ -1,5 +1,5 @@
 """Auth routes: signup, login, profile"""
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -7,11 +7,12 @@ from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import get_db
-from auth.models import Role, ScheduledClass, SessionHistory, Syllabus, User
+from auth.models import Role, ScheduledClass, SessionHistory, Syllabus, TeacherTimetable, User
 from auth.security import create_token, hash_password, verify_password
 from auth.deps import get_current_user, require_admin
 from core.schedule import compute_class_dates, generate_schedule
 from core.syllabus_pdf import extract_syllabus_from_pdf
+from core.timetable_extract import extract_timetable
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -210,6 +211,71 @@ async def upload_syllabus_pdf(
     return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
 
 
+class TimetableResponse(BaseModel):
+    grade: int
+    subject: str
+    weekdays: List[int]
+    note: str
+
+
+def _timetable_weekdays(row: Optional[TeacherTimetable]) -> List[int]:
+    if not row or not row.weekdays.strip():
+        return []
+    return [int(d) for d in row.weekdays.split(",") if d.strip()]
+
+
+def _get_timetable_row(db: Session, user_id: int, grade: int, subject: str) -> Optional[TeacherTimetable]:
+    return db.exec(
+        select(TeacherTimetable).where(
+            TeacherTimetable.user_id == user_id,
+            TeacherTimetable.grade == grade,
+            TeacherTimetable.subject == subject,
+        )
+    ).first()
+
+
+@router.get("/me/timetable", response_model=TimetableResponse)
+def get_timetable(grade: int, subject: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    row = _get_timetable_row(db, user.id, grade, subject)
+    return TimetableResponse(
+        grade=grade,
+        subject=subject,
+        weekdays=_timetable_weekdays(row),
+        note=row.note if row else "",
+    )
+
+
+@router.post("/me/timetable/upload", response_model=TimetableResponse)
+async def upload_timetable(
+    grade: int = Form(...),
+    subject: str = Form(...),
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    file_bytes = await file.read()
+    extracted = extract_timetable(
+        file_bytes, file.content_type or "application/pdf", grade, subject
+    )
+
+    row = _get_timetable_row(db, user.id, grade, subject)
+    if not row:
+        row = TeacherTimetable(user_id=user.id, grade=grade, subject=subject)
+    row.weekdays = ",".join(str(d) for d in extracted["weekdays"])
+    row.note = extracted["note"]
+    row.updated_at = datetime.now(timezone.utc)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+
+    return TimetableResponse(
+        grade=row.grade,
+        subject=row.subject,
+        weekdays=_timetable_weekdays(row),
+        note=row.note,
+    )
+
+
 class ScheduleGenerateRequest(BaseModel):
     grade: int
     subject: str
@@ -252,7 +318,12 @@ async def generate_class_schedule(
     if not syllabus or not syllabus.content.strip():
         raise HTTPException(status_code=400, detail="Save a syllabus for this grade/subject first")
 
-    class_dates = compute_class_dates(req.start_date, req.end_date, req.classes_per_week)
+    # The school's own timetable, if uploaded, decides which days classes land on.
+    real_weekdays = _timetable_weekdays(_get_timetable_row(db, user.id, req.grade, req.subject))
+
+    class_dates = compute_class_dates(
+        req.start_date, req.end_date, req.classes_per_week, weekdays=real_weekdays
+    )
     if not class_dates:
         raise HTTPException(status_code=400, detail="No class dates fall in that range")
 
@@ -373,6 +444,141 @@ class AdminOverviewResponse(BaseModel):
     total_sessions: int
     total_scheduled_classes: int
     coverage: List[CoverageCell]
+
+
+class AdminScheduleRow(BaseModel):
+    id: int
+    teacher_id: int
+    teacher_name: str
+    grade: int
+    subject: str
+    class_number: int
+    chapter: str
+    focus: str
+    scheduled_date: str
+
+
+class AdminScheduleCreateRequest(BaseModel):
+    teacher_id: int
+    grade: int
+    subject: str
+    chapter: str
+    focus: str = ""
+    scheduled_date: date
+
+
+class AdminSchedulePatchRequest(BaseModel):
+    chapter: Optional[str] = None
+    focus: Optional[str] = None
+    scheduled_date: Optional[date] = None
+
+
+def _admin_schedule_row(row: ScheduledClass, teacher: User) -> AdminScheduleRow:
+    return AdminScheduleRow(
+        id=row.id,
+        teacher_id=teacher.id,
+        teacher_name=teacher.name,
+        grade=row.grade,
+        subject=row.subject,
+        class_number=row.class_number,
+        chapter=row.chapter,
+        focus=row.focus,
+        scheduled_date=row.scheduled_date,
+    )
+
+
+@router.get("/admin/schedule", response_model=List[AdminScheduleRow])
+def admin_list_schedule(
+    days: int = 7,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Every teacher's upcoming classes, so an admin can see who is teaching
+    what over the next few days and adjust it."""
+    today = date.today()
+    until = today + timedelta(days=days)
+    rows = db.exec(
+        select(ScheduledClass)
+        .where(
+            ScheduledClass.scheduled_date >= today.isoformat(),
+            ScheduledClass.scheduled_date <= until.isoformat(),
+        )
+        .order_by(ScheduledClass.scheduled_date)
+    ).all()
+
+    teachers = {t.id: t for t in db.exec(select(User)).all()}
+    return [_admin_schedule_row(r, teachers[r.user_id]) for r in rows if r.user_id in teachers]
+
+
+@router.post("/admin/schedule", response_model=AdminScheduleRow)
+def admin_create_scheduled_class(
+    req: AdminScheduleCreateRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    teacher = db.get(User, req.teacher_id)
+    if not teacher or teacher.role != Role.teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+
+    existing = db.exec(
+        select(ScheduledClass).where(
+            ScheduledClass.user_id == teacher.id,
+            ScheduledClass.grade == req.grade,
+            ScheduledClass.subject == req.subject,
+        )
+    ).all()
+
+    row = ScheduledClass(
+        user_id=teacher.id,
+        grade=req.grade,
+        subject=req.subject,
+        class_number=len(existing) + 1,
+        chapter=req.chapter,
+        focus=req.focus,
+        scheduled_date=req.scheduled_date.isoformat(),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _admin_schedule_row(row, teacher)
+
+
+@router.patch("/admin/schedule/{entry_id}", response_model=AdminScheduleRow)
+def admin_patch_scheduled_class(
+    entry_id: int,
+    req: AdminSchedulePatchRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    row = db.get(ScheduledClass, entry_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    if req.chapter is not None:
+        row.chapter = req.chapter
+    if req.focus is not None:
+        row.focus = req.focus
+    if req.scheduled_date is not None:
+        row.scheduled_date = req.scheduled_date.isoformat()
+
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _admin_schedule_row(row, db.get(User, row.user_id))
+
+
+@router.delete("/admin/schedule/{entry_id}")
+def admin_delete_scheduled_class(
+    entry_id: int,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    row = db.get(ScheduledClass, entry_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Class not found")
+    db.delete(row)
+    db.commit()
+    return {"ok": True}
 
 
 @router.get("/admin/overview", response_model=AdminOverviewResponse)

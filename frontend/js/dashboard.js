@@ -65,6 +65,7 @@ function initSyllabus() {
   const loadForSelection = () => {
     loadSyllabus(gradeSelect.value, subjectSelect.value, textarea, statusEl);
     loadSchedule(gradeSelect.value, subjectSelect.value);
+    loadSchoolTimetable(gradeSelect.value, subjectSelect.value);
   };
 
   gradeSelect.addEventListener('change', loadForSelection);
@@ -133,8 +134,18 @@ async function uploadSyllabusPdf(grade, subject, file, textarea, statusEl) {
 let scheduleRows = [];
 let calendarViewDate = new Date();
 
+const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 function initSchedule() {
   document.getElementById('schedule-generate-btn').addEventListener('click', onGenerateSchedule);
+
+  const ttInput = document.getElementById('school-timetable-input');
+  ttInput.addEventListener('change', () => {
+    if (ttInput.files[0]) {
+      uploadSchoolTimetable(ttInput.files[0]);
+      ttInput.value = '';
+    }
+  });
   document.getElementById('tt-cal-prev').addEventListener('click', () => shiftCalendarMonth(-1));
   document.getElementById('tt-cal-next').addEventListener('click', () => shiftCalendarMonth(1));
   document.getElementById('tt-detail-close').addEventListener('click', closeDetail);
@@ -179,6 +190,45 @@ async function onGenerateSchedule() {
   } catch (err) {
     statusEl.textContent = err.message;
   }
+}
+
+async function uploadSchoolTimetable(file) {
+  const grade    = document.getElementById('syllabus-grade').value;
+  const subject  = document.getElementById('syllabus-subject').value;
+  const statusEl = document.getElementById('school-timetable-status');
+
+  statusEl.textContent = 'Reading timetable…';
+  try {
+    const formData = new FormData();
+    formData.append('grade', grade);
+    formData.append('subject', subject);
+    formData.append('file', file);
+    const res = await authFetch('/api/auth/me/timetable/upload', { method: 'POST', body: formData });
+    if (!res.ok) throw new Error('Could not read that timetable');
+    renderTimetableStatus(await res.json());
+  } catch (err) {
+    statusEl.textContent = err.message;
+  }
+}
+
+async function loadSchoolTimetable(grade, subject) {
+  try {
+    const res = await authFetch(`/api/auth/me/timetable?grade=${grade}&subject=${encodeURIComponent(subject)}`);
+    if (!res.ok) return;
+    renderTimetableStatus(await res.json());
+  } catch {
+    // optional feature — schedule generation still works without it
+  }
+}
+
+function renderTimetableStatus(data) {
+  const statusEl = document.getElementById('school-timetable-status');
+  if (!data.weekdays || data.weekdays.length === 0) {
+    statusEl.textContent = '';
+    return;
+  }
+  const days = data.weekdays.map((d) => DAY_NAMES[d]).join(', ');
+  statusEl.textContent = `Classes on ${days} — schedules will use these days.`;
 }
 
 async function loadSchedule(grade, subject) {
