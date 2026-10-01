@@ -14,7 +14,7 @@ from api.tts     import router as tts_router
 from api.export  import router as export_router
 from auth.routes import router as auth_router
 from core.rag    import init_chroma
-from db          import engine
+from db          import engine, ensure_added_columns
 import auth.models  # noqa: F401  (registers tables on SQLModel.metadata)
 
 
@@ -22,6 +22,7 @@ import auth.models  # noqa: F401  (registers tables on SQLModel.metadata)
 async def lifespan(_app: FastAPI):
     """Initialize ChromaDB and DB tables on startup."""
     SQLModel.metadata.create_all(engine)
+    ensure_added_columns()
     init_chroma()
     yield
 
