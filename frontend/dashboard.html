@@ -157,6 +157,43 @@
   </div>
 
   <div class="dash-section">
+    <h2>Class notes</h2>
+    <p class="text-sm text-muted" style="margin-bottom:14px;">
+      Keep notes for this class as a real Google Doc in your own Drive — open or edit it any time, from anywhere.
+    </p>
+    <div class="card" id="notes-card">
+      <div id="notes-disconnected">
+        <p class="text-sm text-muted" style="margin-bottom:12px;">
+          Connect your Google account to keep notes as Google Docs.
+        </p>
+        <button id="notes-connect-btn" class="btn btn-primary btn-sm">Connect Google account</button>
+      </div>
+
+      <div id="notes-connected" style="display:none;">
+        <div class="syllabus-footer" style="margin-top:0;">
+          <span class="text-sm" id="notes-account"></span>
+          <button id="notes-disconnect-btn" class="btn btn-ghost btn-sm">Disconnect</button>
+        </div>
+        <div class="syllabus-footer">
+          <a id="notes-open-link" class="btn btn-secondary btn-sm" target="_blank" rel="noopener" style="display:none;">Open notes in Google Docs</a>
+          <button id="notes-create-btn" class="btn btn-primary btn-sm">Create notes doc for this class</button>
+          <span id="notes-status" class="syllabus-status"></span>
+        </div>
+        <div id="notes-append-area" style="display:none; margin-top:12px;">
+          <textarea id="notes-append-text" class="syllabus-textarea" style="min-height:90px;" placeholder="Add a quick note — it gets appended to the Google Doc with today's date"></textarea>
+          <div class="syllabus-footer">
+            <button id="notes-append-btn" class="btn btn-primary btn-sm">Add to notes</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="notes-unavailable" class="history-empty" style="display:none;">
+        Google notes aren't switched on yet — the Google credentials still need to be added on the server.
+      </div>
+    </div>
+  </div>
+
+  <div class="dash-section">
     <h2>Session history</h2>
     <div class="history-list" id="history-list">
       <div class="history-empty">Loading…</div>

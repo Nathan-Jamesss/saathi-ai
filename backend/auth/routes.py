@@ -1,18 +1,39 @@
 """Auth routes: signup, login, profile"""
+import os
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from db import get_db
-from auth.models import Role, ScheduledClass, SessionHistory, Syllabus, TeacherTimetable, User
+from auth.models import (
+    GoogleAccount,
+    NoteDoc,
+    Role,
+    ScheduledClass,
+    SessionHistory,
+    Syllabus,
+    TeacherTimetable,
+    User,
+)
 from auth.security import create_token, hash_password, verify_password
 from auth.deps import get_current_user, require_admin
 from core.schedule import compute_class_dates, generate_schedule
 from core.syllabus_pdf import extract_syllabus_from_pdf
 from core.timetable_extract import extract_timetable
+from core.google_docs import append_text, create_doc
+from core.google_oauth import (
+    build_authorize_url,
+    exchange_code,
+    expiry_from_now,
+    fetch_google_email,
+    is_configured,
+    read_state,
+    refresh_access_token,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -209,6 +230,206 @@ async def upload_syllabus_pdf(
     db.commit()
     db.refresh(row)
     return SyllabusResponse(grade=row.grade, subject=row.subject, content=row.content)
+
+
+# ── Google account connection + notes as real Google Docs ──
+
+class GoogleStatusResponse(BaseModel):
+    configured: bool
+    connected: bool
+    google_email: str
+
+
+class NotesDocResponse(BaseModel):
+    grade: int
+    subject: str
+    doc_id: str
+    doc_url: str
+
+
+class NotesDocRequest(BaseModel):
+    grade: int
+    subject: str
+
+
+class NotesAppendRequest(BaseModel):
+    grade: int
+    subject: str
+    text: str
+
+
+def _google_account(db: Session, user_id: int) -> Optional[GoogleAccount]:
+    return db.exec(select(GoogleAccount).where(GoogleAccount.user_id == user_id)).first()
+
+
+def _fresh_access_token(db: Session, account: GoogleAccount) -> str:
+    """Google access tokens last about an hour; swap the long-lived refresh
+    token for a new one whenever the current one is close to expiring."""
+    expiry = account.token_expiry
+    if expiry is not None and expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+
+    still_valid = (
+        account.access_token
+        and expiry is not None
+        and expiry > datetime.now(timezone.utc) + timedelta(seconds=60)
+    )
+    if still_valid:
+        return account.access_token
+
+    tokens = refresh_access_token(account.refresh_token)
+    account.access_token = tokens.get("access_token", "")
+    account.token_expiry = expiry_from_now(tokens.get("expires_in"))
+    db.add(account)
+    db.commit()
+    db.refresh(account)
+    return account.access_token
+
+
+@router.get("/me/google", response_model=GoogleStatusResponse)
+def google_status(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    account = _google_account(db, user.id)
+    return GoogleStatusResponse(
+        configured=is_configured(),
+        connected=account is not None,
+        google_email=account.google_email if account else "",
+    )
+
+
+@router.get("/google/authorize")
+def google_authorize(user: User = Depends(get_current_user)):
+    if not is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Google notes are not set up yet — GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are missing",
+        )
+    return {"url": build_authorize_url(user.id)}
+
+
+@router.get("/google/callback")
+def google_callback(code: str, state: str, db: Session = Depends(get_db)):
+    """Google redirects the teacher's browser here after they approve."""
+    frontend = os.environ.get("FRONTEND_URL", "https://frontend-vert-ten-18.vercel.app")
+    try:
+        user_id = read_state(state)
+    except Exception:
+        return RedirectResponse(f"{frontend}/dashboard.html?google=invalid_state")
+
+    try:
+        tokens = exchange_code(code)
+    except Exception:
+        return RedirectResponse(f"{frontend}/dashboard.html?google=failed")
+
+    access_token = tokens.get("access_token", "")
+    refresh_token = tokens.get("refresh_token", "")
+    account = _google_account(db, user_id)
+
+    if not account:
+        if not refresh_token:
+            return RedirectResponse(f"{frontend}/dashboard.html?google=no_refresh_token")
+        account = GoogleAccount(user_id=user_id, refresh_token=refresh_token)
+
+    # Google only re-sends a refresh token on first consent; keep the old one otherwise.
+    if refresh_token:
+        account.refresh_token = refresh_token
+    account.access_token = access_token
+    account.token_expiry = expiry_from_now(tokens.get("expires_in"))
+    account.google_email = fetch_google_email(access_token)
+    db.add(account)
+    db.commit()
+
+    return RedirectResponse(f"{frontend}/dashboard.html?google=connected")
+
+
+@router.delete("/me/google")
+def google_disconnect(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    account = _google_account(db, user.id)
+    if account:
+        db.delete(account)
+        db.commit()
+    return {"ok": True}
+
+
+def _note_doc(db: Session, user_id: int, grade: int, subject: str) -> Optional[NoteDoc]:
+    return db.exec(
+        select(NoteDoc).where(
+            NoteDoc.user_id == user_id,
+            NoteDoc.grade == grade,
+            NoteDoc.subject == subject,
+        )
+    ).first()
+
+
+@router.get("/me/notes", response_model=NotesDocResponse)
+def get_notes_doc(grade: int, subject: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    row = _note_doc(db, user.id, grade, subject)
+    return NotesDocResponse(
+        grade=grade,
+        subject=subject,
+        doc_id=row.doc_id if row else "",
+        doc_url=row.doc_url if row else "",
+    )
+
+
+@router.post("/me/notes", response_model=NotesDocResponse)
+def create_notes_doc(
+    req: NotesDocRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    existing = _note_doc(db, user.id, req.grade, req.subject)
+    if existing:
+        return NotesDocResponse(
+            grade=existing.grade, subject=existing.subject,
+            doc_id=existing.doc_id, doc_url=existing.doc_url,
+        )
+
+    account = _google_account(db, user.id)
+    if not account:
+        raise HTTPException(status_code=400, detail="Connect your Google account first")
+
+    title = f"Saathi notes — Class {req.grade} {req.subject.title()}"
+    created = create_doc(_fresh_access_token(db, account), title)
+
+    row = NoteDoc(
+        user_id=user.id,
+        grade=req.grade,
+        subject=req.subject,
+        doc_id=created["doc_id"],
+        doc_url=created["doc_url"],
+        title=title,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return NotesDocResponse(
+        grade=row.grade, subject=row.subject, doc_id=row.doc_id, doc_url=row.doc_url
+    )
+
+
+@router.post("/me/notes/append", response_model=NotesDocResponse)
+def append_note(
+    req: NotesAppendRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    row = _note_doc(db, user.id, req.grade, req.subject)
+    if not row:
+        raise HTTPException(status_code=400, detail="Create a notes doc for this class first")
+
+    account = _google_account(db, user.id)
+    if not account:
+        raise HTTPException(status_code=400, detail="Connect your Google account first")
+
+    stamp = datetime.now(timezone.utc).strftime("%d %b %Y")
+    append_text(_fresh_access_token(db, account), row.doc_id, f"\n[{stamp}] {req.text}")
+
+    row.updated_at = datetime.now(timezone.utc)
+    db.add(row)
+    db.commit()
+    return NotesDocResponse(
+        grade=row.grade, subject=row.subject, doc_id=row.doc_id, doc_url=row.doc_url
+    )
 
 
 class TimetableResponse(BaseModel):

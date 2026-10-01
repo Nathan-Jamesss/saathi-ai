@@ -13,6 +13,143 @@ async function init() {
   await loadHistory();
   initSyllabus();
   initSchedule();
+  initNotes();
+}
+
+// ── Class notes as Google Docs ──
+function initNotes() {
+  document.getElementById('notes-connect-btn').addEventListener('click', connectGoogle);
+  document.getElementById('notes-disconnect-btn').addEventListener('click', disconnectGoogle);
+  document.getElementById('notes-create-btn').addEventListener('click', createNotesDoc);
+  document.getElementById('notes-append-btn').addEventListener('click', appendNote);
+
+  // Google sends the teacher back here after they approve.
+  const googleResult = new URLSearchParams(location.search).get('google');
+  if (googleResult) {
+    const statusEl = document.getElementById('notes-status');
+    statusEl.textContent = googleResult === 'connected'
+      ? 'Google account connected.'
+      : 'Could not connect that Google account. Try again.';
+    history.replaceState({}, '', location.pathname);
+  }
+
+  loadGoogleStatus();
+}
+
+async function loadGoogleStatus() {
+  const disconnected = document.getElementById('notes-disconnected');
+  const connected = document.getElementById('notes-connected');
+  const unavailable = document.getElementById('notes-unavailable');
+
+  try {
+    const res = await authFetch('/api/auth/me/google');
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (!data.configured) {
+      disconnected.style.display = 'none';
+      connected.style.display = 'none';
+      unavailable.style.display = 'block';
+      return;
+    }
+
+    unavailable.style.display = 'none';
+    disconnected.style.display = data.connected ? 'none' : 'block';
+    connected.style.display = data.connected ? 'block' : 'none';
+
+    if (data.connected) {
+      document.getElementById('notes-account').textContent = data.google_email
+        ? `Connected as ${data.google_email}`
+        : 'Google account connected';
+      const grade = document.getElementById('syllabus-grade').value;
+      const subject = document.getElementById('syllabus-subject').value;
+      loadNotesDoc(grade, subject);
+    }
+  } catch {
+    // notes are optional — the rest of the dashboard works regardless
+  }
+}
+
+async function connectGoogle() {
+  const statusEl = document.getElementById('notes-status');
+  const res = await authFetch('/api/auth/google/authorize');
+  if (!res.ok) {
+    statusEl.textContent = 'Google notes are not switched on yet.';
+    return;
+  }
+  location.href = (await res.json()).url;
+}
+
+async function disconnectGoogle() {
+  await authFetch('/api/auth/me/google', { method: 'DELETE' });
+  await loadGoogleStatus();
+}
+
+async function loadNotesDoc(grade, subject) {
+  const link = document.getElementById('notes-open-link');
+  const createBtn = document.getElementById('notes-create-btn');
+  const appendArea = document.getElementById('notes-append-area');
+
+  const res = await authFetch(`/api/auth/me/notes?grade=${grade}&subject=${encodeURIComponent(subject)}`);
+  if (!res.ok) return;
+  const data = await res.json();
+
+  if (data.doc_url) {
+    link.href = data.doc_url;
+    link.style.display = 'inline-flex';
+    createBtn.style.display = 'none';
+    appendArea.style.display = 'block';
+  } else {
+    link.style.display = 'none';
+    createBtn.style.display = 'inline-flex';
+    appendArea.style.display = 'none';
+  }
+}
+
+async function createNotesDoc() {
+  const grade = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+  const statusEl = document.getElementById('notes-status');
+
+  statusEl.textContent = 'Creating the doc…';
+  const res = await authFetch('/api/auth/me/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grade: Number(grade), subject }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    statusEl.textContent = data.detail || 'Could not create the notes doc';
+    return;
+  }
+  statusEl.textContent = 'Notes doc ready.';
+  await loadNotesDoc(grade, subject);
+}
+
+async function appendNote() {
+  const grade = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+  const textarea = document.getElementById('notes-append-text');
+  const statusEl = document.getElementById('notes-status');
+  const text = textarea.value.trim();
+  if (!text) return;
+
+  statusEl.textContent = 'Saving to Google Docs…';
+  const res = await authFetch('/api/auth/me/notes/append', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grade: Number(grade), subject, text }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    statusEl.textContent = data.detail || 'Could not save the note';
+    return;
+  }
+  textarea.value = '';
+  statusEl.textContent = 'Added to your Google Doc.';
+  setTimeout(() => {
+    if (statusEl.textContent === 'Added to your Google Doc.') statusEl.textContent = '';
+  }, 2500);
 }
 
 async function loadHistory() {
@@ -66,6 +203,9 @@ function initSyllabus() {
     loadSyllabus(gradeSelect.value, subjectSelect.value, textarea, statusEl);
     loadSchedule(gradeSelect.value, subjectSelect.value);
     loadSchoolTimetable(gradeSelect.value, subjectSelect.value);
+    if (document.getElementById('notes-connected').style.display === 'block') {
+      loadNotesDoc(gradeSelect.value, subjectSelect.value);
+    }
   };
 
   gradeSelect.addEventListener('change', loadForSelection);

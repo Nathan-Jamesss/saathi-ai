@@ -19,5 +19,13 @@ services:
         sync: false            # set in Render dashboard — used once by create_admin.py
       - key: ADMIN_PASSWORD
         sync: false            # set in Render dashboard — used once by create_admin.py
+      - key: GOOGLE_CLIENT_ID
+        sync: false            # OAuth client for Google Docs notes (optional feature)
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false            # OAuth client secret — set in Render dashboard
+      - key: GOOGLE_REDIRECT_URI
+        value: https://saathi-ai-hfqi.onrender.com/api/auth/google/callback
+      - key: FRONTEND_URL
+        value: https://frontend-vert-ten-18.vercel.app
       - key: PYTHON_VERSION
         value: "3.11"

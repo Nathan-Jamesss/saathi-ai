@@ -40,6 +40,38 @@ class Syllabus(SQLModel, table=True):
     )
 
 
+class GoogleAccount(SQLModel, table=True):
+    """A teacher's connected Google account, so Saathi can write notes into
+    their own Drive as real Google Docs."""
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", unique=True, index=True)
+    google_email: str = ""
+    refresh_token: str
+    access_token: str = ""
+    token_expiry: Optional[datetime] = None
+    connected_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
+class NoteDoc(SQLModel, table=True):
+    """One Google Doc of notes per class a teacher takes."""
+
+    __table_args__ = (UniqueConstraint("user_id", "grade", "subject"),)
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    grade: int
+    subject: str
+    doc_id: str
+    doc_url: str
+    title: str = ""
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
 class TeacherTimetable(SQLModel, table=True):
     """The real weekly slots a grade/subject actually meets, read off the
     school's own timetable sheet — so generated schedules land on real class
