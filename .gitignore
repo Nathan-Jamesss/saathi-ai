@@ -22,6 +22,9 @@ Thumbs.db
 # Render build artifacts
 *.log
 
+# OAuth client credentials downloaded from Google Cloud Console
+client_secret_*.json
+
 # Local dev DB (Postgres via DATABASE_URL in prod)
 backend/data/*.db
 .gstack/
