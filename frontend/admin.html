@@ -40,6 +40,28 @@
   </div>
 
   <div class="dash-section">
+    <div class="flex items-center justify-between" style="margin-bottom:14px;">
+      <h2 style="margin:0;">Teacher progress</h2>
+      <button id="export-report-btn" class="btn btn-secondary btn-sm">Download report (CSV)</button>
+    </div>
+    <p class="text-sm text-muted" style="margin-bottom:14px;">
+      How far each teacher is through their timetable, and how many classes they have this week.
+      Anyone well behind the others needs a conversation.
+    </p>
+    <div class="card" style="overflow-x:auto;">
+      <table class="coverage-table" id="progress-table"></table>
+    </div>
+  </div>
+
+  <div class="dash-section">
+    <h2>Usage, last 14 days</h2>
+    <p class="text-sm text-muted" style="margin-bottom:14px;">AI lessons generated each day across all teachers.</p>
+    <div class="card">
+      <div class="activity-chart" id="activity-chart"></div>
+    </div>
+  </div>
+
+  <div class="dash-section">
     <h2>Grade &amp; subject coverage</h2>
     <p class="text-sm text-muted" style="margin-bottom:14px;">Which teachers have prepared a syllabus for each grade and subject. Empty cells are gaps with no teacher currently assigned.</p>
     <div class="card" style="overflow-x:auto;">

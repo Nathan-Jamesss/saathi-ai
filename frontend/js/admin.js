@@ -11,9 +11,105 @@ async function init() {
   document.getElementById('add-teacher-form').addEventListener('submit', onAddTeacher);
   document.getElementById('admin-sched-days').addEventListener('change', loadAdminSchedule);
   document.getElementById('admin-add-class-form').addEventListener('submit', onAddClass);
+  document.getElementById('export-report-btn').addEventListener('click', downloadReport);
   await loadOverview();
+  await loadProgress();
+  await loadActivity();
   await loadTeachers();
   await loadAdminSchedule();
+}
+
+// ── Teacher progress + workload ──
+async function loadProgress() {
+  const table = document.getElementById('progress-table');
+  const res = await authFetch('/api/auth/admin/progress');
+  if (!res.ok) return;
+  const rows = await res.json();
+
+  if (rows.length === 0) {
+    table.innerHTML = '<tbody><tr><td class="coverage-cell gap">No teachers yet.</td></tr></tbody>';
+    return;
+  }
+
+  // Lowest completion first, so whoever is furthest behind is at the top.
+  rows.sort((a, b) => a.percent_done - b.percent_done);
+
+  table.innerHTML = `
+    <thead><tr>
+      <th>Teacher</th><th>Progress</th><th>Done</th><th>This week</th><th>Last active</th>
+    </tr></thead>
+    <tbody>
+      ${rows.map((r) => `
+        <tr>
+          <td class="coverage-row-label">${r.teacher_name}${r.is_active ? '' : ' <span class="text-muted">(deactivated)</span>'}</td>
+          <td style="min-width:160px;">
+            ${r.total_classes === 0
+              ? '<span class="text-muted">No timetable yet</span>'
+              : `<div class="tt-progress-bar"><div class="tt-progress-fill" style="width:${r.percent_done}%"></div></div>`}
+          </td>
+          <td>${r.total_classes === 0 ? '—' : `${r.done_classes} / ${r.total_classes} (${r.percent_done}%)`}</td>
+          <td>${r.classes_this_week}</td>
+          <td>${r.last_active ? formatShortDate(r.last_active) : 'never'}</td>
+        </tr>`).join('')}
+    </tbody>
+  `;
+}
+
+function formatShortDate(iso) {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// ── Usage chart ──
+async function loadActivity() {
+  const chart = document.getElementById('activity-chart');
+  const res = await authFetch('/api/auth/admin/activity?days=14');
+  if (!res.ok) return;
+  const days = await res.json();
+
+  const max = Math.max(1, ...days.map((d) => d.sessions));
+  chart.innerHTML = days.map((d) => {
+    const height = Math.round((d.sessions / max) * 100);
+    const label = new Date(d.date + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+    return `
+      <div class="activity-col" title="${label}: ${d.sessions} lesson${d.sessions === 1 ? '' : 's'}">
+        <div class="activity-count">${d.sessions || ''}</div>
+        <div class="activity-bar" style="height:${Math.max(height, d.sessions ? 6 : 2)}%"></div>
+        <div class="activity-label">${new Date(d.date + 'T00:00:00').getDate()}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── CSV report ──
+async function downloadReport() {
+  const res = await authFetch('/api/auth/admin/report.csv');
+  if (!res.ok) return;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `saathi-report-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ── Password reset ──
+async function resetPassword(teacher) {
+  const password = prompt(`New password for ${teacher.name} (at least 6 characters):`);
+  if (!password) return;
+
+  const res = await authFetch(`/api/auth/admin/teachers/${teacher.id}/password`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  if (res.ok) {
+    alert(`Password changed. Tell ${teacher.name} their new password — it isn't shown again.`);
+  } else {
+    const data = await res.json().catch(() => ({}));
+    alert(data.detail || 'Could not change the password.');
+  }
 }
 
 // ── Upcoming classes across all teachers ──
@@ -210,8 +306,12 @@ async function loadTeachers() {
         <div>${t.name} — ${t.email}</div>
         <div class="meta">${t.session_count} sessions · last active ${lastActive} · ${t.is_active ? 'active' : 'deactivated'}</div>
       </div>
-      <button class="btn btn-secondary btn-sm toggle-btn">${t.is_active ? 'Deactivate' : 'Activate'}</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-ghost btn-sm reset-btn">Reset password</button>
+        <button class="btn btn-secondary btn-sm toggle-btn">${t.is_active ? 'Deactivate' : 'Activate'}</button>
+      </div>
     `;
+    item.querySelector('.reset-btn').addEventListener('click', () => resetPassword(t));
     item.querySelector('.toggle-btn').addEventListener('click', () => toggleTeacher(t.id, !t.is_active));
     listEl.appendChild(item);
   }

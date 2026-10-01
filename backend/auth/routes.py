@@ -1,11 +1,13 @@
 """Auth routes: signup, login, profile"""
+import csv
+import io
 import logging
 import os
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -737,6 +739,146 @@ class AdminOverviewResponse(BaseModel):
     total_sessions: int
     total_scheduled_classes: int
     coverage: List[CoverageCell]
+
+
+class TeacherProgressRow(BaseModel):
+    teacher_id: int
+    teacher_name: str
+    email: str
+    is_active: bool
+    total_classes: int
+    done_classes: int
+    percent_done: int
+    classes_this_week: int
+    last_active: Optional[str]
+
+
+def _teacher_progress_rows(db: Session) -> List[TeacherProgressRow]:
+    today = date.today()
+    week_start = today - timedelta(days=today.weekday())
+    week_end = week_start + timedelta(days=6)
+
+    classes = db.exec(select(ScheduledClass)).all()
+    sessions = db.exec(select(SessionHistory)).all()
+
+    by_teacher: dict = {}
+    for c in classes:
+        stats = by_teacher.setdefault(c.user_id, {"total": 0, "done": 0, "week": 0})
+        stats["total"] += 1
+        if c.scheduled_date < today.isoformat():
+            stats["done"] += 1
+        if week_start.isoformat() <= c.scheduled_date <= week_end.isoformat():
+            stats["week"] += 1
+
+    last_seen: dict = {}
+    for s in sessions:
+        if s.user_id not in last_seen or s.created_at > last_seen[s.user_id]:
+            last_seen[s.user_id] = s.created_at
+
+    rows = []
+    for t in db.exec(select(User).where(User.role == Role.teacher)).all():
+        stats = by_teacher.get(t.id, {"total": 0, "done": 0, "week": 0})
+        total = stats["total"]
+        seen = last_seen.get(t.id)
+        rows.append(
+            TeacherProgressRow(
+                teacher_id=t.id,
+                teacher_name=t.name,
+                email=t.email,
+                is_active=t.is_active,
+                total_classes=total,
+                done_classes=stats["done"],
+                percent_done=round(stats["done"] / total * 100) if total else 0,
+                classes_this_week=stats["week"],
+                last_active=seen.isoformat() if seen else None,
+            )
+        )
+    return rows
+
+
+@router.get("/admin/progress", response_model=List[TeacherProgressRow])
+def admin_progress(_admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Per-teacher syllabus progress and workload — shows who is falling behind
+    and who is carrying the most classes this week."""
+    return _teacher_progress_rows(db)
+
+
+class ActivityDay(BaseModel):
+    date: str
+    sessions: int
+
+
+@router.get("/admin/activity", response_model=List[ActivityDay])
+def admin_activity(
+    days: int = 14,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """AI lessons generated per day, oldest first, ending today."""
+    days = max(1, min(days, 90))
+    today = date.today()
+    counts = {(today - timedelta(days=i)).isoformat(): 0 for i in range(days)}
+
+    for s in db.exec(select(SessionHistory)).all():
+        key = s.created_at.date().isoformat()
+        if key in counts:
+            counts[key] += 1
+
+    return [ActivityDay(date=d, sessions=counts[d]) for d in sorted(counts)]
+
+
+class PasswordResetRequest(BaseModel):
+    password: str
+
+
+@router.patch("/admin/teachers/{teacher_id}/password")
+def admin_reset_teacher_password(
+    teacher_id: int,
+    req: PasswordResetRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """There is no email reset flow, so a locked-out teacher needs an admin to
+    set a new password for them."""
+    teacher = db.get(User, teacher_id)
+    if not teacher or teacher.role != Role.teacher:
+        raise HTTPException(status_code=404, detail="Teacher not found")
+    if len(req.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+
+    teacher.password_hash = hash_password(req.password)
+    db.add(teacher)
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/admin/report.csv")
+def admin_report_csv(_admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """One row per teacher, ready to hand to a principal or education officer."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "Teacher", "Email", "Status", "Total classes", "Classes done",
+        "Percent done", "Classes this week", "Last active",
+    ])
+    for r in _teacher_progress_rows(db):
+        writer.writerow([
+            r.teacher_name,
+            r.email,
+            "active" if r.is_active else "deactivated",
+            r.total_classes,
+            r.done_classes,
+            f"{r.percent_done}%",
+            r.classes_this_week,
+            r.last_active[:10] if r.last_active else "never",
+        ])
+
+    filename = f"saathi-report-{date.today().isoformat()}.csv"
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 class AdminScheduleRow(BaseModel):
