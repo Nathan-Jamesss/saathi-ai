@@ -212,6 +212,7 @@ async function loadHistory() {
     if (!res.ok) throw new Error('Failed to load history');
     historyRows = await res.json();
     renderHistory();
+    renderGlance();
   } catch (err) {
     listEl.innerHTML = `<div class="history-empty">Couldn't load history: ${err.message}</div>`;
   }
@@ -453,6 +454,8 @@ async function loadSchoolTimetable(grade, subject) {
 
 function renderTimetableStatus(data) {
   const statusEl = document.getElementById('school-timetable-status');
+  schoolDays = data.weekdays || null;
+  renderGlance();
   if (!data.weekdays || data.weekdays.length === 0) {
     statusEl.textContent = '';
     return;
@@ -475,6 +478,8 @@ function renderSchedule(rows) {
   scheduleRows = rows;
   updateCalendarButton();
   renderTopics();
+  renderUpcoming();
+  renderGlance();
   const calendar = document.getElementById('schedule-calendar');
   const progress = document.getElementById('schedule-progress');
   const bento = document.getElementById('bento-overview');
@@ -510,6 +515,63 @@ function renderSchedule(rows) {
   calendarViewDate = new Date(y, m - 1, 1);
 
   renderCalendar();
+}
+
+// ── Up next: the next few classes, each launchable ──
+function renderUpcoming() {
+  const block = document.getElementById('upcoming-block');
+  const list = document.getElementById('upcoming-list');
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const next = scheduleRows.filter((r) => r.scheduled_date >= todayStr).slice(0, 4);
+  block.style.display = next.length ? 'block' : 'none';
+
+  const grade = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+  list.innerHTML = '';
+  for (const row of next) {
+    const label = new Date(row.scheduled_date + 'T00:00:00')
+      .toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    const item = document.createElement('div');
+    item.className = 'upcoming-item';
+    item.innerHTML = `
+      <div class="upcoming-date">${label}</div>
+      <div class="upcoming-body">
+        <div class="upcoming-chapter">${row.chapter}</div>
+        <div class="upcoming-focus">${row.focus}</div>
+      </div>
+      <button class="btn btn-secondary btn-sm">Launch</button>
+    `;
+    item.querySelector('button').addEventListener('click', () => launchLesson(grade, subject, row.chapter));
+    list.appendChild(item);
+  }
+}
+
+// ── At a glance tiles ──
+let schoolDays = null;
+
+function renderGlance() {
+  const tiles = document.getElementById('glance-tiles');
+  const grade = Number(document.getElementById('syllabus-grade').value);
+  const subject = document.getElementById('syllabus-subject').value;
+
+  const now = new Date();
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const thisWeek = scheduleRows.filter((r) => r.scheduled_date >= iso(monday) && r.scheduled_date <= iso(sunday)).length;
+  const lessons = historyRows.filter((r) => r.grade === grade && r.subject === subject).length;
+  const days = schoolDays && schoolDays.length
+    ? schoolDays.map((d) => DAY_NAMES[d]).join(' ')
+    : 'Not uploaded';
+
+  tiles.innerHTML = [
+    [thisWeek, 'classes this week'],
+    [lessons, 'AI lessons run'],
+    [scheduleRows.length, 'classes planned'],
+    [days, 'school class days'],
+  ].map(([num, label]) => `
+    <div class="insight-tile"><div class="insight-num${typeof num === 'string' ? ' insight-num-sm' : ''}">${num}</div><div class="insight-label">${label}</div></div>
+  `).join('');
 }
 
 // ── Syllabus topics: chapters with how many of their classes are done ──

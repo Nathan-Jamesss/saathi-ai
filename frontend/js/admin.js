@@ -33,12 +33,70 @@ function wireDialogs() {
   }
 }
 
+// ── At a glance + needs attention (built from coverage + progress) ──
+let coverageData = [];
+let progressData = [];
+
+function renderInsights() {
+  const tiles = document.getElementById('insight-tiles');
+  const list = document.getElementById('attention-list');
+  if (!tiles || coverageData.length === 0) return;
+
+  const slots = coverageData.length;
+  const covered = coverageData.filter((c) => c.teachers.length > 0).length;
+  const withTimetable = progressData.filter((r) => r.total_classes > 0);
+  const neverUsed = progressData.filter((r) => !r.last_active).length;
+  const avg = withTimetable.length
+    ? Math.round(withTimetable.reduce((sum, r) => sum + r.percent_done, 0) / withTimetable.length)
+    : 0;
+
+  tiles.innerHTML = [
+    [`${covered}/${slots}`, 'class-subject slots with a teacher'],
+    [`${withTimetable.length}/${progressData.length}`, 'teachers with a timetable'],
+    [`${avg}%`, 'average syllabus done'],
+    [neverUsed, 'teachers never used the app'],
+  ].map(([num, label]) => `
+    <div class="insight-tile"><div class="insight-num">${num}</div><div class="insight-label">${label}</div></div>
+  `).join('');
+
+  const busy = [...progressData].filter((r) => r.classes_this_week > 0)
+    .sort((a, b) => b.classes_this_week - a.classes_this_week).slice(0, 5);
+  const maxWeek = Math.max(1, ...busy.map((r) => r.classes_this_week));
+  document.getElementById('workload-list').innerHTML = busy.length
+    ? busy.map((r) => `
+        <div class="workload-row">
+          <span class="workload-name">${r.teacher_name}</span>
+          <div class="topic-bar"><div class="topic-fill" style="width:${Math.round((r.classes_this_week / maxWeek) * 100)}%"></div></div>
+          <span class="topic-count">${r.classes_this_week}</span>
+        </div>`).join('')
+    : '<div class="text-sm text-muted">No classes scheduled this week.</div>';
+
+  const items = [];
+  const behind = [...withTimetable].filter((r) => r.percent_done < 50)
+    .sort((a, b) => a.percent_done - b.percent_done).slice(0, 3);
+  for (const r of behind) {
+    items.push(`<strong>${r.teacher_name}</strong> is at ${r.percent_done}% (${r.done_classes}/${r.total_classes} classes)`);
+  }
+  const noTimetable = progressData.filter((r) => r.total_classes === 0 && r.is_active).length;
+  if (noTimetable > 0) {
+    items.push(`${noTimetable} active teacher${noTimetable === 1 ? ' has' : 's have'} no timetable yet`);
+  }
+  if (neverUsed > 0) {
+    items.push(`${neverUsed} teacher${neverUsed === 1 ? ' has' : 's have'} never launched the classroom`);
+  }
+  list.innerHTML = items.length
+    ? items.map((t) => `<li>${t}</li>`).join('')
+    : '<li class="attention-ok">Nothing flagged. Everyone is on track.</li>';
+}
+
 // ── Teacher progress + workload ──
 async function loadProgress() {
   const table = document.getElementById('progress-table');
   const res = await authFetch('/api/auth/admin/progress');
   if (!res.ok) return;
   const rows = await res.json();
+  progressData = rows;
+  renderInsights();
 
   if (rows.length === 0) {
     table.innerHTML = '<tbody><tr><td class="coverage-cell gap">No teachers yet.</td></tr></tbody>';
@@ -83,6 +141,18 @@ async function loadActivity() {
   const res = await authFetch('/api/auth/admin/activity?days=14');
   if (!res.ok) return;
   const days = await res.json();
+
+  const total = days.reduce((sum, d) => sum + d.sessions, 0);
+  const activeDays = days.filter((d) => d.sessions > 0).length;
+  const busiest = days.reduce((a, b) => (b.sessions > a.sessions ? b : a), days[0] || { sessions: 0, date: '' });
+  document.getElementById('usage-tiles').innerHTML = [
+    [total, 'lessons generated'],
+    [activeDays, 'days with activity'],
+    [total ? (total / days.length).toFixed(1) : '0', 'lessons per day'],
+    [busiest.sessions ? formatShortDate(busiest.date + 'T00:00:00') : 'None yet', 'busiest day'],
+  ].map(([num, label]) => `
+    <div class="insight-tile"><div class="insight-num${typeof num === 'string' && num.length > 4 ? ' insight-num-sm' : ''}">${num}</div><div class="insight-label">${label}</div></div>
+  `).join('');
 
   const max = Math.max(1, ...days.map((d) => d.sessions));
   chart.innerHTML = days.map((d) => {
@@ -265,6 +335,8 @@ async function loadOverview() {
   document.getElementById('stat-total-sessions').textContent = data.total_sessions;
   document.getElementById('stat-total-scheduled').textContent = data.total_scheduled_classes;
 
+  coverageData = data.coverage;
+  renderInsights();
   renderCoverageTable(data.coverage);
 }
 

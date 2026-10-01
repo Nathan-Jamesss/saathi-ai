@@ -63,6 +63,10 @@
       <h2 style="margin-bottom:6px;">Usage, last 14 days</h2>
       <p class="text-sm text-muted" style="margin-bottom:12px;">AI lessons generated each day.</p>
       <div class="activity-chart" id="activity-chart"></div>
+      <div class="insight-block">
+        <h3>Last 14 days</h3>
+        <div class="insight-tiles" id="usage-tiles"></div>
+      </div>
     </div>
   </div>
 
@@ -72,6 +76,13 @@
       <p class="text-sm text-muted" style="margin-bottom:12px;">Which teachers have a syllabus for each grade and subject. A dash means no teacher has it yet. Hover a count to see names.</p>
       <div class="admin-scroll">
         <table class="coverage-table" id="coverage-table"></table>
+      </div>
+
+      <div class="insight-block">
+        <h3>At a glance</h3>
+        <div class="insight-tiles" id="insight-tiles"></div>
+        <h3 style="margin-top:16px;">Needs attention</h3>
+        <ul class="attention-list" id="attention-list"></ul>
       </div>
     </div>
 
@@ -124,6 +135,11 @@
           <span id="admin-add-class-status" class="syllabus-status"></span>
         </div>
       </form>
+
+      <div class="insight-block">
+        <h3>Classes this week, by teacher</h3>
+        <div class="workload-list" id="workload-list"></div>
+      </div>
     </div>
   </div>
 
