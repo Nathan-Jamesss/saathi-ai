@@ -21,8 +21,12 @@ TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo"
 
 # documents = create/edit Docs. drive.file = only the files we create, never
-# the teacher's whole Drive.
-SCOPES = "https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/drive.file"
+# the teacher's whole Drive. calendar.events = add/update class events.
+SCOPES = " ".join([
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/calendar.events",
+])
 
 STATE_TTL_SECONDS = 600
 

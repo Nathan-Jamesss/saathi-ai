@@ -57,6 +57,9 @@ async function loadGoogleStatus() {
     disconnected.style.display = data.connected ? 'none' : 'block';
     connected.style.display = data.connected ? 'block' : 'none';
 
+    googleConnected = data.connected;
+    updateCalendarButton();
+
     if (data.connected) {
       document.getElementById('notes-account').textContent = data.google_email
         ? `Connected as ${data.google_email}`
@@ -273,11 +276,18 @@ async function uploadSyllabusPdf(grade, subject, file, textarea, statusEl) {
 // ── Class timetable (calendar) ──
 let scheduleRows = [];
 let calendarViewDate = new Date();
+let googleConnected = false;
+
+function updateCalendarButton() {
+  const btn = document.getElementById('calendar-sync-btn');
+  btn.style.display = googleConnected && scheduleRows.length > 0 ? 'inline-flex' : 'none';
+}
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function initSchedule() {
   document.getElementById('schedule-generate-btn').addEventListener('click', onGenerateSchedule);
+  document.getElementById('calendar-sync-btn').addEventListener('click', syncToGoogleCalendar);
 
   const ttInput = document.getElementById('school-timetable-input');
   ttInput.addEventListener('change', () => {
@@ -332,6 +342,26 @@ async function onGenerateSchedule() {
   }
 }
 
+async function syncToGoogleCalendar() {
+  const grade = document.getElementById('syllabus-grade').value;
+  const subject = document.getElementById('syllabus-subject').value;
+  const statusEl = document.getElementById('schedule-status');
+
+  statusEl.textContent = 'Adding classes to your Google Calendar…';
+  const res = await authFetch('/api/auth/me/schedule/sync-calendar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grade: Number(grade), subject }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    statusEl.textContent = data.detail || 'Could not sync to Google Calendar';
+    return;
+  }
+  const { synced } = await res.json();
+  statusEl.textContent = `${synced} classes added to your Google Calendar.`;
+}
+
 async function uploadSchoolTimetable(file) {
   const grade    = document.getElementById('syllabus-grade').value;
   const subject  = document.getElementById('syllabus-subject').value;
@@ -383,6 +413,7 @@ async function loadSchedule(grade, subject) {
 
 function renderSchedule(rows) {
   scheduleRows = rows;
+  updateCalendarButton();
   const calendar = document.getElementById('schedule-calendar');
   const progress = document.getElementById('schedule-progress');
   const bento = document.getElementById('bento-overview');

@@ -1,4 +1,5 @@
 """Auth routes: signup, login, profile"""
+import logging
 import os
 from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
@@ -24,6 +25,7 @@ from auth.deps import get_current_user, require_admin
 from core.schedule import compute_class_dates, generate_schedule
 from core.syllabus_pdf import extract_syllabus_from_pdf
 from core.timetable_extract import extract_timetable
+from core.google_calendar import delete_class_event, upsert_class_event
 from core.google_docs import append_text, create_doc
 from core.google_oauth import (
     build_authorize_url,
@@ -34,6 +36,8 @@ from core.google_oauth import (
     read_state,
     refresh_access_token,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -581,6 +585,59 @@ async def generate_class_schedule(
     return [_schedule_response(r) for r in created]
 
 
+class CalendarSyncRequest(BaseModel):
+    grade: int
+    subject: str
+
+
+class CalendarSyncResponse(BaseModel):
+    synced: int
+
+
+@router.post("/me/schedule/sync-calendar", response_model=CalendarSyncResponse)
+def sync_schedule_to_calendar(
+    req: CalendarSyncRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Put this class's whole schedule on the teacher's own Google Calendar.
+    Re-syncing updates the same events instead of making duplicates."""
+    account = _google_account(db, user.id)
+    if not account:
+        raise HTTPException(status_code=400, detail="Connect your Google account first")
+
+    rows = db.exec(
+        select(ScheduledClass)
+        .where(
+            ScheduledClass.user_id == user.id,
+            ScheduledClass.grade == req.grade,
+            ScheduledClass.subject == req.subject,
+        )
+        .order_by(ScheduledClass.scheduled_date)
+    ).all()
+    if not rows:
+        raise HTTPException(status_code=400, detail="Generate a timetable for this class first")
+
+    access_token = _fresh_access_token(db, account)
+    synced = 0
+    for row in rows:
+        summary = f"Class {row.grade} {row.subject.title()} — {row.chapter}"
+        event_id = upsert_class_event(
+            access_token,
+            row.calendar_event_id,
+            summary,
+            row.focus,
+            row.scheduled_date,
+        )
+        if event_id != row.calendar_event_id:
+            row.calendar_event_id = event_id
+            db.add(row)
+        synced += 1
+    db.commit()
+
+    return CalendarSyncResponse(synced=synced)
+
+
 @router.get("/me/schedule", response_model=List[ScheduledClassResponse])
 def list_schedule(
     grade: int,
@@ -600,6 +657,20 @@ def list_schedule(
     return [_schedule_response(r) for r in rows]
 
 
+def _remove_calendar_event(db: Session, row: ScheduledClass) -> None:
+    """Best-effort: drop the matching Google Calendar event so a deleted class
+    doesn't linger on the teacher's calendar. Never blocks the delete itself."""
+    if not row.calendar_event_id:
+        return
+    account = _google_account(db, row.user_id)
+    if not account:
+        return
+    try:
+        delete_class_event(_fresh_access_token(db, account), row.calendar_event_id)
+    except Exception:
+        logger.warning("Could not remove calendar event for class %s", row.id, exc_info=True)
+
+
 @router.delete("/me/schedule/{entry_id}")
 def delete_scheduled_class(
     entry_id: int,
@@ -609,6 +680,7 @@ def delete_scheduled_class(
     row = db.get(ScheduledClass, entry_id)
     if not row or row.user_id != user.id:
         raise HTTPException(status_code=404, detail="Not found")
+    _remove_calendar_event(db, row)
     db.delete(row)
     db.commit()
     return {"ok": True}
@@ -797,6 +869,7 @@ def admin_delete_scheduled_class(
     row = db.get(ScheduledClass, entry_id)
     if not row:
         raise HTTPException(status_code=404, detail="Class not found")
+    _remove_calendar_event(db, row)
     db.delete(row)
     db.commit()
     return {"ok": True}

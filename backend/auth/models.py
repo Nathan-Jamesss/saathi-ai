@@ -99,6 +99,7 @@ class ScheduledClass(SQLModel, table=True):
     chapter: str
     focus: str = ""
     scheduled_date: str  # ISO date (YYYY-MM-DD)
+    calendar_event_id: str = ""  # set once synced to the teacher's Google Calendar
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
