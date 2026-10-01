@@ -30,7 +30,7 @@ export function logout() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ROLE_KEY);
   localStorage.removeItem(NAME_KEY);
-  location.href = 'login.html';
+  location.replace('index.html');
 }
 
 async function _authRequest(path, body) {
@@ -63,13 +63,17 @@ export async function authFetch(path, options = {}) {
 }
 
 export function requireAuth(expectedRole) {
+  // Back button after logout can restore a cached page; re-check when it does.
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted && !getToken()) location.replace('index.html');
+  });
   const token = getToken();
   if (!token) {
-    location.href = 'login.html';
+    location.replace('login.html');
     return false;
   }
   if (expectedRole && getRole() !== expectedRole) {
-    location.href = getRole() === 'admin' ? 'admin.html' : 'dashboard.html';
+    location.replace(getRole() === 'admin' ? 'admin.html' : 'dashboard.html');
     return false;
   }
   return true;

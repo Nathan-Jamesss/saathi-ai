@@ -68,3 +68,16 @@
 .auth-switch a {
   text-decoration: underline;
 }
+
+.auth-home-link {
+  position: absolute;
+  top: 20px;
+  left: 24px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.auth-home-link:hover {
+  color: var(--text-primary);
+}
