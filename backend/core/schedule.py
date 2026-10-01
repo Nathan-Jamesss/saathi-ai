@@ -2,12 +2,15 @@
 Gemini only maps syllabus chapters onto the computed class slots."""
 
 import json
+import logging
 from datetime import date, timedelta
 from typing import List, Optional
 
 from google.genai import types
 
 from core.keys import generate_content
+
+logger = logging.getLogger(__name__)
 
 SCHEDULE_PROMPT = """You are planning a teaching schedule for Class {grade} {subject}.
 
@@ -59,6 +62,18 @@ def compute_class_dates(
     return dates
 
 
+def _fallback_sessions(syllabus_content: str, slot_count: int) -> list:
+    """No AI available (quota out, outage): spread the syllabus lines evenly."""
+    lines = [l.strip(" -*	") for l in syllabus_content.splitlines() if l.strip()]
+    if not lines or slot_count <= 0:
+        return []
+    sessions = []
+    for i in range(slot_count):
+        line = lines[i * len(lines) // slot_count]
+        sessions.append({"chapter": line, "focus": "Planned from your syllabus"})
+    return sessions
+
+
 async def generate_schedule(syllabus_content: str, grade: int, subject: str, class_dates: List[date]) -> list:
     prompt = SCHEDULE_PROMPT.format(
         grade=grade, subject=subject, syllabus=syllabus_content, slot_count=len(class_dates)
@@ -81,5 +96,6 @@ async def generate_schedule(syllabus_content: str, grade: int, subject: str, cla
                 import asyncio
                 await asyncio.sleep(2 ** attempt)
             elif attempt == 2:
-                raise
-    return []
+                logger.warning("Schedule AI failed, using even split: %s", e)
+                return _fallback_sessions(syllabus_content, len(class_dates))
+    return _fallback_sessions(syllabus_content, len(class_dates))
