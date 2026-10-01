@@ -6,136 +6,100 @@
   <title>Saathi.AI · Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/main.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
 </head>
 <body>
 
-<div class="dash-page">
+<div class="dash-page dash-wide">
   <div class="dash-header">
     <h1>Welcome, <span id="teacher-name">Teacher</span></h1>
     <div class="flex gap-12 items-center">
       <a href="index.html" class="btn btn-ghost">Home</a>
+      <button class="btn btn-secondary" data-open="history-dialog">Session history</button>
       <a href="app.html" class="btn btn-primary">Launch classroom</a>
       <button id="logout-btn" class="btn btn-ghost">Log out</button>
     </div>
   </div>
 
-  <div class="dash-section">
-    <div class="bento-grid" id="bento-overview" style="display:none;">
-      <div class="bento-card bento-hero" id="bento-next-up">
-        <div class="bento-card-header">
-          <span class="bento-icon">▶</span>
-          <span class="bento-label">Continue teaching</span>
-        </div>
-        <div id="bento-next-body"></div>
-      </div>
-      <div class="bento-card">
-        <div class="bento-card-header">
-          <span class="bento-icon">◐</span>
-          <span class="bento-label">Syllabus covered</span>
-        </div>
-        <div class="bento-ring-wrap">
-          <svg class="bento-ring" viewBox="0 0 100 100">
-            <circle class="ring-bg" cx="50" cy="50" r="42" />
-            <circle class="ring-fill" id="bento-ring-fill" cx="50" cy="50" r="42" />
-          </svg>
-          <span class="bento-ring-text" id="bento-ring-text">0%</span>
-        </div>
-      </div>
-      <div class="bento-card">
-        <div class="bento-card-header">
-          <span class="bento-icon">✓</span>
-          <span class="bento-label">Classes</span>
-        </div>
-        <div class="bento-count-row">
-          <div><div class="bento-stat-num" id="bento-done-num">0</div><div class="bento-stat-label">done</div></div>
-          <div><div class="bento-stat-num" id="bento-remaining-num">0</div><div class="bento-stat-label">left</div></div>
-        </div>
-      </div>
+  <!-- Which class this whole page is showing -->
+  <div class="class-bar">
+    <div class="class-bar-picker">
+      <span class="class-bar-label">Showing</span>
+      <select id="syllabus-grade" aria-label="Class">
+        <option value="8">Class 8</option>
+        <option value="9">Class 9</option>
+        <option value="10" selected>Class 10</option>
+        <option value="11">Class 11</option>
+        <option value="12">Class 12</option>
+      </select>
+      <select id="syllabus-subject" aria-label="Subject">
+        <option value="science" selected>Science</option>
+        <option value="mathematics">Mathematics</option>
+        <option value="history">History</option>
+        <option value="geography">Geography</option>
+        <option value="political science">Political Science</option>
+        <option value="economics">Economics</option>
+        <option value="english">English</option>
+      </select>
     </div>
-    <div class="history-empty" id="bento-empty">No timetable yet — save a syllabus and generate one below to see your progress here.</div>
-  </div>
-
-  <div class="dash-section">
-    <h2>My syllabus</h2>
-    <div class="card">
-      <div class="syllabus-controls">
-        <select id="syllabus-grade">
-          <option value="8">Class 8</option>
-          <option value="9">Class 9</option>
-          <option value="10" selected>Class 10</option>
-          <option value="11">Class 11</option>
-          <option value="12">Class 12</option>
-        </select>
-        <select id="syllabus-subject">
-          <option value="science" selected>Science</option>
-          <option value="mathematics">Mathematics</option>
-          <option value="history">History</option>
-          <option value="geography">Geography</option>
-          <option value="political science">Political Science</option>
-          <option value="economics">Economics</option>
-          <option value="english">English</option>
-        </select>
-      </div>
-      <textarea id="syllabus-content" class="syllabus-textarea" placeholder="Chapters, topics, and pacing notes for this class — e.g.&#10;Ch 1: Matter in our surroundings&#10;Ch 2: Is matter around us pure&#10;..."></textarea>
-      <div class="syllabus-footer">
-        <button id="syllabus-save-btn" class="btn btn-primary btn-sm">Save syllabus</button>
-        <label class="btn btn-secondary btn-sm" for="syllabus-pdf-input" style="cursor:pointer;">
-          Upload NCERT PDF
-          <input type="file" id="syllabus-pdf-input" accept="application/pdf" style="display:none;" />
-        </label>
-        <span id="syllabus-status" class="syllabus-status"></span>
-      </div>
+    <div class="class-bar-actions">
+      <button class="btn btn-secondary btn-sm" data-open="syllabus-dialog">Edit syllabus</button>
+      <button class="btn btn-secondary btn-sm" data-open="plan-dialog">Plan term</button>
     </div>
   </div>
 
-  <div class="dash-section">
-    <h2>Class timetable</h2>
-    <div class="card">
-      <p class="text-sm text-muted" style="margin-bottom:14px;">
-        Generates a class-by-class schedule from the syllabus above (save or upload it first) for the selected grade/subject.
-        Upload your school's own timetable and classes land on the real days that class meets, instead of evenly spread guesses.
-      </p>
-      <div class="tt-controls">
-        <div class="tt-field">
-          <label for="schedule-start">Term start</label>
-          <input type="date" id="schedule-start" />
-        </div>
-        <div class="tt-field">
-          <label for="schedule-end">Term end</label>
-          <input type="date" id="schedule-end" />
-        </div>
-        <div class="tt-field">
-          <label for="schedule-per-week">Classes / week</label>
-          <select id="schedule-per-week">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-        </div>
+  <div class="bento-grid dash-bento" id="bento-overview" style="display:none;">
+    <div class="bento-card bento-hero" id="bento-next-up">
+      <div class="bento-card-header">
+        <span class="bento-icon">▶</span>
+        <span class="bento-label">Continue teaching</span>
       </div>
-      <div class="syllabus-footer">
-        <label class="btn btn-secondary btn-sm" for="school-timetable-input" style="cursor:pointer;">
-          Upload school timetable
-          <input type="file" id="school-timetable-input" accept="application/pdf,image/*" style="display:none;" />
-        </label>
-        <span id="school-timetable-status" class="syllabus-status"></span>
+      <div id="bento-next-body"></div>
+    </div>
+    <div class="bento-card">
+      <div class="bento-card-header">
+        <span class="bento-icon">◐</span>
+        <span class="bento-label">Syllabus covered</span>
       </div>
-      <div class="syllabus-footer">
-        <button id="schedule-generate-btn" class="btn btn-primary btn-sm">Generate timetable</button>
-        <button id="calendar-sync-btn" class="btn btn-secondary btn-sm" style="display:none;">Add to Google Calendar</button>
+      <div class="bento-ring-wrap">
+        <svg class="bento-ring" viewBox="0 0 100 100">
+          <circle class="ring-bg" cx="50" cy="50" r="42" />
+          <circle class="ring-fill" id="bento-ring-fill" cx="50" cy="50" r="42" />
+        </svg>
+        <span class="bento-ring-text" id="bento-ring-text">0%</span>
+      </div>
+    </div>
+    <div class="bento-card">
+      <div class="bento-card-header">
+        <span class="bento-icon">✓</span>
+        <span class="bento-label">Classes</span>
+      </div>
+      <div class="bento-count-row">
+        <div><div class="bento-stat-num" id="bento-done-num">0</div><div class="bento-stat-label">done</div></div>
+        <div><div class="bento-stat-num" id="bento-remaining-num">0</div><div class="bento-stat-label">left</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card history-empty" id="bento-empty" style="margin-bottom:20px;">
+    No timetable for this class yet. Click <strong>Edit syllabus</strong>, then <strong>Plan term</strong> to build one.
+  </div>
+
+  <div class="admin-cols admin-cols-main">
+    <div class="card admin-panel">
+      <div class="flex items-center justify-between" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Class calendar</h2>
         <span id="schedule-status" class="syllabus-status"></span>
       </div>
-      <div class="tt-progress" id="schedule-progress" style="display:none;">
+      <p class="text-sm text-muted" style="margin-bottom:12px;">Click a day to see what you are teaching and launch the lesson.</p>
+
+      <div class="tt-progress" id="schedule-progress" style="display:none; margin:0 0 14px;">
         <div class="tt-progress-bar"><div class="tt-progress-fill" id="schedule-progress-fill"></div></div>
         <div class="tt-progress-text" id="schedule-progress-text"></div>
       </div>
 
-      <div class="tt-calendar" id="schedule-calendar" style="display:none;">
+      <div class="tt-calendar" id="schedule-calendar" style="display:none; margin-top:0;">
         <div class="tt-cal-header">
           <button class="btn btn-ghost btn-sm" id="tt-cal-prev">←</button>
           <span id="tt-cal-title" class="tt-cal-title"></span>
@@ -156,52 +120,140 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="dash-section">
-    <h2>Class notes</h2>
-    <p class="text-sm text-muted" style="margin-bottom:14px;">
-      Keep notes for this class as a real Google Doc in your own Drive — open or edit it any time, from anywhere.
-    </p>
-    <div class="card" id="notes-card">
-      <div id="notes-disconnected">
-        <p class="text-sm text-muted" style="margin-bottom:12px;">
-          Connect your Google account to keep notes as Google Docs.
-        </p>
-        <button id="notes-connect-btn" class="btn btn-primary btn-sm">Connect Google account</button>
+    <div class="dash-side">
+      <div class="card admin-panel">
+        <div class="flex items-center justify-between" style="margin-bottom:6px;">
+          <h2 style="margin:0;">Syllabus topics</h2>
+          <button class="btn btn-ghost btn-sm" data-open="syllabus-dialog">Edit</button>
+        </div>
+        <p class="text-sm text-muted" style="margin-bottom:12px;">Each chapter and how many of its classes are done.</p>
+        <div class="topic-list" id="topic-list"></div>
       </div>
 
-      <div id="notes-connected" style="display:none;">
-        <div class="syllabus-footer" style="margin-top:0;">
-          <span class="text-sm" id="notes-account"></span>
-          <button id="notes-disconnect-btn" class="btn btn-ghost btn-sm">Disconnect</button>
+      <div class="card admin-panel" id="notes-card">
+        <h2 style="margin-bottom:6px;">Class notes</h2>
+        <p class="text-sm text-muted" style="margin-bottom:12px;">
+          Notes for this class live as a real Google Doc in your own Drive.
+        </p>
+
+        <div id="notes-disconnected">
+          <button id="notes-connect-btn" class="btn btn-primary btn-sm">Connect Google account</button>
         </div>
-        <div class="syllabus-footer">
-          <a id="notes-open-link" class="btn btn-secondary btn-sm" target="_blank" rel="noopener" style="display:none;">Open notes in Google Docs</a>
-          <button id="notes-create-btn" class="btn btn-primary btn-sm">Create notes doc for this class</button>
+
+        <div id="notes-connected" style="display:none;">
+          <div class="notes-account-row">
+            <span class="text-sm text-muted" id="notes-account"></span>
+            <button id="notes-disconnect-btn" class="btn btn-ghost btn-sm">Disconnect</button>
+          </div>
+          <div class="notes-actions">
+            <a id="notes-open-link" class="btn btn-primary btn-sm" target="_blank" rel="noopener" style="display:none;">Open this class's doc</a>
+            <button id="notes-create-btn" class="btn btn-primary btn-sm">Create notes doc</button>
+            <span id="notes-append-area" style="display:none;">
+              <button class="btn btn-secondary btn-sm" data-open="note-dialog">Add a note</button>
+            </span>
+            <button class="btn btn-secondary btn-sm" id="notes-old-btn">Older notes</button>
+            <a class="btn btn-ghost btn-sm" href="https://drive.google.com/drive/my-drive" target="_blank" rel="noopener">Open Google Drive</a>
+          </div>
           <span id="notes-status" class="syllabus-status"></span>
         </div>
-        <div id="notes-append-area" style="display:none; margin-top:12px;">
-          <textarea id="notes-append-text" class="syllabus-textarea" style="min-height:90px;" placeholder="Add a quick note — it gets appended to the Google Doc with today's date"></textarea>
-          <div class="syllabus-footer">
-            <button id="notes-append-btn" class="btn btn-primary btn-sm">Add to notes</button>
-          </div>
+
+        <div id="notes-unavailable" class="text-sm text-muted" style="display:none;">
+          Google notes aren't switched on yet. The Google credentials still need to be added on the server.
         </div>
       </div>
-
-      <div id="notes-unavailable" class="history-empty" style="display:none;">
-        Google notes aren't switched on yet — the Google credentials still need to be added on the server.
-      </div>
-    </div>
-  </div>
-
-  <div class="dash-section">
-    <h2>Session history</h2>
-    <div class="history-list" id="history-list">
-      <div class="history-empty">Loading…</div>
     </div>
   </div>
 </div>
+
+<!-- ── Popups ── -->
+<dialog id="syllabus-dialog" class="admin-dialog">
+  <div class="admin-dialog-head">
+    <h2>Edit syllabus</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <p class="text-sm text-muted" style="margin-bottom:10px;">Paste the chapters and topics for the class shown above, or upload the NCERT PDF and let the AI read it.</p>
+  <textarea id="syllabus-content" class="syllabus-textarea" placeholder="Chapters, topics, and pacing notes for this class, e.g.&#10;Ch 1: Matter in our surroundings&#10;Ch 2: Is matter around us pure&#10;..."></textarea>
+  <div class="syllabus-footer">
+    <button id="syllabus-save-btn" class="btn btn-primary btn-sm">Save syllabus</button>
+    <label class="btn btn-secondary btn-sm" for="syllabus-pdf-input" style="cursor:pointer;">
+      Upload NCERT PDF
+      <input type="file" id="syllabus-pdf-input" accept="application/pdf" style="display:none;" />
+    </label>
+    <span id="syllabus-status" class="syllabus-status"></span>
+  </div>
+</dialog>
+
+<dialog id="plan-dialog" class="admin-dialog">
+  <div class="admin-dialog-head">
+    <h2>Plan term</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <p class="text-sm text-muted" style="margin-bottom:14px;">
+    Builds a class-by-class schedule from the syllabus for the class shown above. Upload your school's timetable and classes land on the days that class really meets.
+  </p>
+  <div class="tt-controls">
+    <div class="tt-field">
+      <label for="schedule-start">Term start</label>
+      <input type="date" id="schedule-start" />
+    </div>
+    <div class="tt-field">
+      <label for="schedule-end">Term end</label>
+      <input type="date" id="schedule-end" />
+    </div>
+    <div class="tt-field">
+      <label for="schedule-per-week">Classes / week</label>
+      <select id="schedule-per-week">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3" selected>3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+  </div>
+  <div class="syllabus-footer">
+    <label class="btn btn-secondary btn-sm" for="school-timetable-input" style="cursor:pointer;">
+      Upload school timetable
+      <input type="file" id="school-timetable-input" accept="application/pdf,image/*" style="display:none;" />
+    </label>
+    <span id="school-timetable-status" class="syllabus-status"></span>
+  </div>
+  <div class="syllabus-footer">
+    <button id="schedule-generate-btn" class="btn btn-primary btn-sm">Generate timetable</button>
+    <button id="calendar-sync-btn" class="btn btn-secondary btn-sm" style="display:none;">Add to Google Calendar</button>
+    <span id="schedule-dialog-status" class="syllabus-status"></span>
+  </div>
+</dialog>
+
+<dialog id="note-dialog" class="admin-dialog admin-dialog-narrow">
+  <div class="admin-dialog-head">
+    <h2>Add a note</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <textarea id="notes-append-text" class="syllabus-textarea" style="min-height:110px;" placeholder="It gets added to the Google Doc with today's date"></textarea>
+  <div class="syllabus-footer">
+    <button id="notes-append-btn" class="btn btn-primary btn-sm">Add to notes</button>
+  </div>
+</dialog>
+
+<dialog id="old-notes-dialog" class="admin-dialog admin-dialog-narrow">
+  <div class="admin-dialog-head">
+    <h2>Older notes</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <div class="teacher-list" id="old-notes-list"></div>
+</dialog>
+
+<dialog id="history-dialog" class="admin-dialog">
+  <div class="admin-dialog-head">
+    <h2>Session history</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-empty">Loading…</div>
+  </div>
+</dialog>
 
 <script type="module" src="js/dashboard.js"></script>
 </body>

@@ -177,3 +177,22 @@ def test_disconnect_google(client, google_configured):
     resp = client.delete("/api/auth/me/google", headers=headers)
     assert resp.status_code == 200
     assert client.get("/api/auth/me/google", headers=headers).json()["connected"] is False
+
+
+def test_list_all_notes_docs_returns_every_class_doc(client, google_configured):
+    token = _signup_token(client, "g-listnotes@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+    _connect_google(client, headers)
+
+    assert client.get("/api/auth/me/notes/all", headers=headers).json() == []
+
+    for grade, subject in [(10, "science"), (9, "history")]:
+        with patch(
+            "auth.routes.create_doc",
+            return_value={"doc_id": f"d-{grade}", "doc_url": f"https://docs.google.com/document/d/d-{grade}/edit"},
+        ):
+            client.post("/api/auth/me/notes", json={"grade": grade, "subject": subject}, headers=headers)
+
+    rows = client.get("/api/auth/me/notes/all", headers=headers).json()
+    assert [(r["grade"], r["subject"]) for r in rows] == [(9, "history"), (10, "science")]
+    assert rows[0]["doc_url"].endswith("/d-9/edit")

@@ -377,6 +377,16 @@ def get_notes_doc(grade: int, subject: str, user: User = Depends(get_current_use
     )
 
 
+@router.get("/me/notes/all", response_model=List[NotesDocResponse])
+def list_notes_docs(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.exec(select(NoteDoc).where(NoteDoc.user_id == user.id)).all()
+    rows.sort(key=lambda r: (r.grade, r.subject))
+    return [
+        NotesDocResponse(grade=r.grade, subject=r.subject, doc_id=r.doc_id, doc_url=r.doc_url)
+        for r in rows
+    ]
+
+
 @router.post("/me/notes", response_model=NotesDocResponse)
 def create_notes_doc(
     req: NotesDocRequest,

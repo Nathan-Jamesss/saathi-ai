@@ -522,6 +522,7 @@
 .stack-form select { width: 100%; }
 
 .admin-dialog {
+  margin: auto; /* the global reset strips the default centring margin */
   width: min(720px, calc(100vw - 32px));
   max-height: 80vh;
   padding: 20px;
@@ -619,3 +620,108 @@
 #coverage-table th { font-size: 0.7rem; padding: 6px 4px; white-space: normal; text-align: center; }
 #coverage-table th.coverage-row-label { text-align: left; white-space: nowrap; }
 #coverage-table .coverage-cell { padding: 8px 6px; min-width: 0; text-align: center; }
+
+/* ── Teacher dashboard ── */
+.class-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.class-bar-picker,
+.class-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.class-bar-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.class-bar select {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+}
+
+.dash-bento { margin-bottom: 20px; }
+.dash-bento .bento-ring-wrap { width: 76px; height: 76px; }
+.dash-bento .bento-next-topic { font-size: 1.15rem; }
+
+.dash-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.topic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.topic-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.topic-name {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.topic-count {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.topic-bar {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.topic-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.topic-row.done .topic-name { color: var(--text-muted); }
+.topic-row.next .topic-name { color: var(--accent); font-weight: 600; }
+
+.notes-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.notes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.notes-actions #notes-append-area { display: inline-flex; }

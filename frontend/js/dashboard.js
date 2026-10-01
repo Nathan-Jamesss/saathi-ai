@@ -10,14 +10,30 @@ async function init() {
   document.getElementById('teacher-name').textContent = getName() || 'Teacher';
   document.getElementById('logout-btn').addEventListener('click', logout);
 
+  wireDialogs();
   await loadHistory();
   initSyllabus();
   initSchedule();
   initNotes();
 }
 
+// ── Popups ──
+function wireDialogs() {
+  for (const btn of document.querySelectorAll('[data-open]')) {
+    btn.addEventListener('click', () => document.getElementById(btn.dataset.open).showModal());
+  }
+  for (const dialog of document.querySelectorAll('dialog')) {
+    dialog.querySelector('[data-close]')?.addEventListener('click', () => dialog.close());
+    // Click on the dimmed backdrop closes too.
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  }
+}
+
 // ── Class notes as Google Docs ──
+let allNotes = [];
+
 function initNotes() {
+  document.getElementById('notes-old-btn').addEventListener('click', openOldNotes);
   document.getElementById('notes-connect-btn').addEventListener('click', connectGoogle);
   document.getElementById('notes-disconnect-btn').addEventListener('click', disconnectGoogle);
   document.getElementById('notes-create-btn').addEventListener('click', createNotesDoc);
@@ -67,10 +83,40 @@ async function loadGoogleStatus() {
       const grade = document.getElementById('syllabus-grade').value;
       const subject = document.getElementById('syllabus-subject').value;
       loadNotesDoc(grade, subject);
+      loadAllNotes();
     }
   } catch {
     // notes are optional — the rest of the dashboard works regardless
   }
+}
+
+async function loadAllNotes() {
+  try {
+    const res = await authFetch('/api/auth/me/notes/all');
+    if (!res.ok) return;
+    allNotes = await res.json();
+    renderHistory(); // session rows can now link to their class's doc
+  } catch {
+    // optional: the rest of the dashboard works without it
+  }
+}
+
+function openOldNotes() {
+  const list = document.getElementById('old-notes-list');
+  if (allNotes.length === 0) {
+    list.innerHTML = '<div class="history-empty">No notes docs yet. Create one for a class and it shows up here.</div>';
+  } else {
+    list.innerHTML = allNotes.map((n) => `
+      <div class="history-item card">
+        <div>${classLabel(n.grade, n.subject)}</div>
+        <a class="btn btn-secondary btn-sm" href="${n.doc_url}" target="_blank" rel="noopener">Open doc</a>
+      </div>`).join('');
+  }
+  document.getElementById('old-notes-dialog').showModal();
+}
+
+function classLabel(grade, subject) {
+  return `Class ${grade} · ${subject.charAt(0).toUpperCase() + subject.slice(1)}`;
 }
 
 async function connectGoogle() {
@@ -127,6 +173,7 @@ async function createNotesDoc() {
   }
   statusEl.textContent = 'Notes doc ready.';
   await loadNotesDoc(grade, subject);
+  loadAllNotes();
 }
 
 async function appendNote() {
@@ -149,39 +196,47 @@ async function appendNote() {
     return;
   }
   textarea.value = '';
+  document.getElementById('note-dialog').close();
   statusEl.textContent = 'Added to your Google Doc.';
   setTimeout(() => {
     if (statusEl.textContent === 'Added to your Google Doc.') statusEl.textContent = '';
   }, 2500);
 }
 
+let historyRows = [];
+
 async function loadHistory() {
   const listEl = document.getElementById('history-list');
   try {
     const res = await authFetch('/api/auth/me/history');
     if (!res.ok) throw new Error('Failed to load history');
-    const rows = await res.json();
-    renderHistory(listEl, rows);
+    historyRows = await res.json();
+    renderHistory();
   } catch (err) {
     listEl.innerHTML = `<div class="history-empty">Couldn't load history: ${err.message}</div>`;
   }
 }
 
-function renderHistory(listEl, rows) {
-  if (rows.length === 0) {
-    listEl.innerHTML = '<div class="history-empty">No sessions yet — launch the classroom to get started.</div>';
+function renderHistory() {
+  const listEl = document.getElementById('history-list');
+  if (historyRows.length === 0) {
+    listEl.innerHTML = '<div class="history-empty">No sessions yet. Launch the classroom to get started.</div>';
     return;
   }
   listEl.innerHTML = '';
-  for (const row of rows) {
+  for (const row of historyRows) {
+    const doc = allNotes.find((n) => n.grade === row.grade && n.subject === row.subject);
     const item = document.createElement('div');
     item.className = 'history-item card';
     item.innerHTML = `
       <div>
         <div>${row.topic || row.intent}</div>
-        <div class="meta">${row.intent} · Grade ${row.grade} · ${row.subject} · ${new Date(row.created_at).toLocaleString()}</div>
+        <div class="meta">${row.intent} · ${classLabel(row.grade, row.subject)} · ${new Date(row.created_at).toLocaleString()}</div>
       </div>
-      <button class="btn btn-secondary btn-sm resume-btn">Resume</button>
+      <div class="flex gap-12 items-center">
+        ${doc ? `<a class="btn btn-ghost btn-sm" href="${doc.doc_url}" target="_blank" rel="noopener">Open notes</a>` : ''}
+        <button class="btn btn-secondary btn-sm resume-btn">Resume</button>
+      </div>
     `;
     item.querySelector('.resume-btn').addEventListener('click', () => resume(row));
     listEl.appendChild(item);
@@ -234,6 +289,7 @@ async function loadSyllabus(grade, subject, textarea, statusEl) {
     const data = await res.json();
     textarea.value = data.content || '';
     statusEl.textContent = '';
+    renderTopics();
   } catch (err) {
     statusEl.textContent = err.message;
   }
@@ -249,6 +305,7 @@ async function saveSyllabus(grade, subject, content, statusEl) {
     });
     if (!res.ok) throw new Error('Failed to save syllabus');
     statusEl.textContent = 'Saved.';
+    renderTopics();
     setTimeout(() => { if (statusEl.textContent === 'Saved.') statusEl.textContent = ''; }, 2000);
   } catch (err) {
     statusEl.textContent = err.message;
@@ -267,6 +324,7 @@ async function uploadSyllabusPdf(grade, subject, file, textarea, statusEl) {
     const data = await res.json();
     textarea.value = data.content || '';
     statusEl.textContent = 'Extracted and saved.';
+    renderTopics();
     setTimeout(() => { if (statusEl.textContent === 'Extracted and saved.') statusEl.textContent = ''; }, 2500);
   } catch (err) {
     statusEl.textContent = err.message;
@@ -312,7 +370,7 @@ async function onGenerateSchedule() {
   const startDate  = document.getElementById('schedule-start').value;
   const endDate    = document.getElementById('schedule-end').value;
   const perWeek    = document.getElementById('schedule-per-week').value;
-  const statusEl   = document.getElementById('schedule-status');
+  const statusEl   = document.getElementById('schedule-dialog-status');
 
   if (!startDate || !endDate) {
     statusEl.textContent = 'Pick a term start and end date.';
@@ -336,7 +394,9 @@ async function onGenerateSchedule() {
     }
     const rows = await res.json();
     renderSchedule(rows);
-    statusEl.textContent = `Generated ${rows.length} classes.`;
+    statusEl.textContent = '';
+    document.getElementById('plan-dialog').close();
+    document.getElementById('schedule-status').textContent = `Generated ${rows.length} classes.`;
   } catch (err) {
     statusEl.textContent = err.message;
   }
@@ -345,7 +405,7 @@ async function onGenerateSchedule() {
 async function syncToGoogleCalendar() {
   const grade = document.getElementById('syllabus-grade').value;
   const subject = document.getElementById('syllabus-subject').value;
-  const statusEl = document.getElementById('schedule-status');
+  const statusEl = document.getElementById('schedule-dialog-status');
 
   statusEl.textContent = 'Adding classes to your Google Calendar…';
   const res = await authFetch('/api/auth/me/schedule/sync-calendar', {
@@ -414,6 +474,7 @@ async function loadSchedule(grade, subject) {
 function renderSchedule(rows) {
   scheduleRows = rows;
   updateCalendarButton();
+  renderTopics();
   const calendar = document.getElementById('schedule-calendar');
   const progress = document.getElementById('schedule-progress');
   const bento = document.getElementById('bento-overview');
@@ -449,6 +510,48 @@ function renderSchedule(rows) {
   calendarViewDate = new Date(y, m - 1, 1);
 
   renderCalendar();
+}
+
+// ── Syllabus topics: chapters with how many of their classes are done ──
+function renderTopics() {
+  const list = document.getElementById('topic-list');
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  if (scheduleRows.length > 0) {
+    const chapters = [];
+    for (const row of scheduleRows) {
+      let ch = chapters.find((c) => c.name === row.chapter);
+      if (!ch) {
+        ch = { name: row.chapter, done: 0, total: 0 };
+        chapters.push(ch);
+      }
+      ch.total += 1;
+      if (row.scheduled_date < todayStr) ch.done += 1;
+    }
+    const nextName = (scheduleRows.find((r) => r.scheduled_date >= todayStr) || {}).chapter;
+    list.innerHTML = chapters.map((ch) => {
+      const pct = Math.round((ch.done / ch.total) * 100);
+      const state = pct === 100 ? 'done' : ch.name === nextName ? 'next' : '';
+      return `
+        <div class="topic-row ${state}">
+          <div class="topic-top">
+            <span class="topic-name">${ch.name}</span>
+            <span class="topic-count">${ch.done}/${ch.total}</span>
+          </div>
+          <div class="topic-bar"><div class="topic-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }).join('');
+    return;
+  }
+
+  // No timetable yet: show the chapter-looking lines of the syllabus text.
+  const text = document.getElementById('syllabus-content').value;
+  const lines = text.split('\n').map((l) => l.trim())
+    .filter((l) => l && !/^[-*•]/.test(l) && l.length <= 90)
+    .slice(0, 12);
+  list.innerHTML = lines.length
+    ? lines.map((l) => `<div class="topic-row"><div class="topic-top"><span class="topic-name">${l}</span></div></div>`).join('')
+    : '<div class="text-sm text-muted">No syllabus yet. Click Edit to add one.</div>';
 }
 
 const RING_CIRCUMFERENCE = 263.9;
