@@ -8,6 +8,7 @@ if (requireAuth('admin')) {
 
 async function init() {
   document.getElementById('logout-btn').addEventListener('click', logout);
+  wireDialogs();
   document.getElementById('add-teacher-form').addEventListener('submit', onAddTeacher);
   document.getElementById('admin-sched-days').addEventListener('change', loadAdminSchedule);
   document.getElementById('admin-add-class-form').addEventListener('submit', onAddClass);
@@ -17,6 +18,19 @@ async function init() {
   await loadActivity();
   await loadTeachers();
   await loadAdminSchedule();
+}
+
+// ── Popups (teacher list, add teacher) ──
+function wireDialogs() {
+  const teachersDialog = document.getElementById('teachers-dialog');
+  const addDialog = document.getElementById('add-teacher-dialog');
+  document.getElementById('open-teachers-btn').addEventListener('click', () => teachersDialog.showModal());
+  document.getElementById('open-add-teacher-btn').addEventListener('click', () => addDialog.showModal());
+  for (const dialog of [teachersDialog, addDialog]) {
+    dialog.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+    // Click on the dimmed backdrop closes too.
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  }
 }
 
 // ── Teacher progress + workload ──
@@ -285,6 +299,7 @@ async function loadTeachers() {
     return;
   }
   const teachers = await res.json();
+  document.getElementById('open-teachers-btn').textContent = `Teachers (${teachers.length})`;
   if (teachers.length === 0) {
     listEl.innerHTML = '<div class="history-empty">No teachers yet.</div>';
     return;
@@ -345,6 +360,7 @@ async function onAddTeacher(e) {
     return;
   }
   e.target.reset();
+  document.getElementById('add-teacher-dialog').close();
   await loadOverview();
   await loadTeachers();
 }

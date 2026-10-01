@@ -13,92 +13,74 @@
 </head>
 <body>
 
-<div class="dash-page">
+<div class="dash-page dash-wide">
   <div class="dash-header">
     <h1>Admin</h1>
     <div class="flex gap-12 items-center">
       <a href="index.html" class="btn btn-ghost">Home</a>
+      <button id="open-teachers-btn" class="btn btn-secondary">Teachers</button>
+      <button id="open-add-teacher-btn" class="btn btn-primary">Add teacher</button>
       <button id="logout-btn" class="btn btn-ghost">Log out</button>
     </div>
   </div>
 
-  <div class="dash-section">
-    <div class="bento-grid" id="admin-stats">
-      <div class="bento-card">
-        <div class="bento-card-header"><span class="bento-icon">✓</span><span class="bento-label">Teachers</span></div>
-        <div class="bento-count-row">
-          <div><div class="bento-stat-num" id="stat-total-teachers">0</div><div class="bento-stat-label">total</div></div>
-          <div><div class="bento-stat-num" id="stat-active-teachers">0</div><div class="bento-stat-label">active</div></div>
-        </div>
+  <div class="bento-grid admin-stats" id="admin-stats">
+    <div class="bento-card">
+      <div class="bento-card-header"><span class="bento-icon">✓</span><span class="bento-label">Teachers</span></div>
+      <div class="bento-count-row">
+        <div><div class="bento-stat-num" id="stat-total-teachers">0</div><div class="bento-stat-label">total</div></div>
+        <div><div class="bento-stat-num" id="stat-active-teachers">0</div><div class="bento-stat-label">active</div></div>
       </div>
-      <div class="bento-card">
-        <div class="bento-card-header"><span class="bento-icon">▶</span><span class="bento-label">AI sessions</span></div>
-        <div class="bento-stat-num" id="stat-total-sessions" style="text-align:center;">0</div>
-      </div>
-      <div class="bento-card">
-        <div class="bento-card-header"><span class="bento-icon">◐</span><span class="bento-label">Classes scheduled</span></div>
-        <div class="bento-stat-num" id="stat-total-scheduled" style="text-align:center;">0</div>
-      </div>
+    </div>
+    <div class="bento-card">
+      <div class="bento-card-header"><span class="bento-icon">▶</span><span class="bento-label">AI sessions</span></div>
+      <div class="bento-stat-num" id="stat-total-sessions" style="text-align:center;">0</div>
+    </div>
+    <div class="bento-card">
+      <div class="bento-card-header"><span class="bento-icon">◐</span><span class="bento-label">Classes scheduled</span></div>
+      <div class="bento-stat-num" id="stat-total-scheduled" style="text-align:center;">0</div>
     </div>
   </div>
 
-  <div class="dash-section">
-    <div class="flex items-center justify-between" style="margin-bottom:14px;">
-      <h2 style="margin:0;">Teacher progress</h2>
-      <button id="export-report-btn" class="btn btn-secondary btn-sm">Download report (CSV)</button>
+  <div class="admin-cols admin-cols-main">
+    <div class="card admin-panel">
+      <div class="flex items-center justify-between" style="margin-bottom:6px;">
+        <h2 style="margin:0;">Teacher progress</h2>
+        <button id="export-report-btn" class="btn btn-secondary btn-sm">Download CSV</button>
+      </div>
+      <p class="text-sm text-muted" style="margin-bottom:12px;">
+        How far each teacher is through their timetable. Anyone well behind needs a conversation.
+      </p>
+      <div class="admin-scroll">
+        <table class="coverage-table wrap-table" id="progress-table"></table>
+      </div>
     </div>
-    <p class="text-sm text-muted" style="margin-bottom:14px;">
-      How far each teacher is through their timetable, and how many classes they have this week.
-      Anyone well behind the others needs a conversation.
-    </p>
-    <div class="card" style="overflow-x:auto;">
-      <table class="coverage-table" id="progress-table"></table>
-    </div>
-  </div>
 
-  <div class="dash-section">
-    <h2>Usage, last 14 days</h2>
-    <p class="text-sm text-muted" style="margin-bottom:14px;">AI lessons generated each day across all teachers.</p>
-    <div class="card">
+    <div class="card admin-panel">
+      <h2 style="margin-bottom:6px;">Usage, last 14 days</h2>
+      <p class="text-sm text-muted" style="margin-bottom:12px;">AI lessons generated each day.</p>
       <div class="activity-chart" id="activity-chart"></div>
     </div>
   </div>
 
-  <div class="dash-section">
-    <h2>Grade &amp; subject coverage</h2>
-    <p class="text-sm text-muted" style="margin-bottom:14px;">Which teachers have prepared a syllabus for each grade and subject. Empty cells are gaps with no teacher currently assigned.</p>
-    <div class="card" style="overflow-x:auto;">
-      <table class="coverage-table" id="coverage-table"></table>
-    </div>
-  </div>
-
-  <div class="dash-section">
-    <h2>Upcoming classes</h2>
-    <p class="text-sm text-muted" style="margin-bottom:14px;">
-      What every teacher is teaching over the next few days. Edits here show up in that teacher's own dashboard and calendar.
-    </p>
-    <div class="card">
-      <div class="tt-controls">
-        <div class="tt-field">
-          <label for="admin-sched-days">Show next</label>
-          <select id="admin-sched-days">
-            <option value="1">1 day</option>
-            <option value="3">3 days</option>
-            <option value="7" selected>7 days</option>
-            <option value="30">30 days</option>
-          </select>
-        </div>
+  <div class="admin-cols admin-cols-main">
+    <div class="card admin-panel">
+      <h2 style="margin-bottom:6px;">Grade &amp; subject coverage</h2>
+      <p class="text-sm text-muted" style="margin-bottom:12px;">Which teachers have a syllabus for each grade and subject. Empty cells are gaps.</p>
+      <div class="admin-scroll">
+        <table class="coverage-table" id="coverage-table"></table>
       </div>
-      <table class="coverage-table" id="admin-schedule-table"></table>
-      <div id="admin-schedule-empty" class="history-empty">No classes scheduled in this window.</div>
+    </div>
 
-      <h3 style="font-size:0.95rem; margin:24px 0 10px;">Add a class</h3>
-      <form id="admin-add-class-form">
+    <div class="card admin-panel">
+      <h2 style="margin-bottom:6px;">Add a class</h2>
+      <p class="text-sm text-muted" style="margin-bottom:12px;">Shows up in that teacher's own dashboard and calendar.</p>
+      <form id="admin-add-class-form" class="stack-form">
+        <div class="tt-field">
+          <label for="ac-teacher">Teacher</label>
+          <select id="ac-teacher" required></select>
+        </div>
         <div class="tt-controls">
-          <div class="tt-field">
-            <label for="ac-teacher">Teacher</label>
-            <select id="ac-teacher" required></select>
-          </div>
           <div class="tt-field">
             <label for="ac-grade">Class</label>
             <select id="ac-grade">
@@ -126,15 +108,13 @@
             <input type="date" id="ac-date" required />
           </div>
         </div>
-        <div class="tt-controls">
-          <div class="tt-field" style="flex:1;">
-            <label for="ac-chapter">Chapter</label>
-            <input type="text" id="ac-chapter" required placeholder="e.g. Chapter 3: Gravitation" />
-          </div>
-          <div class="tt-field" style="flex:1;">
-            <label for="ac-focus">Focus (optional)</label>
-            <input type="text" id="ac-focus" placeholder="What this session covers" />
-          </div>
+        <div class="tt-field">
+          <label for="ac-chapter">Chapter</label>
+          <input type="text" id="ac-chapter" required placeholder="e.g. Chapter 3: Gravitation" />
+        </div>
+        <div class="tt-field">
+          <label for="ac-focus">Focus (optional)</label>
+          <input type="text" id="ac-focus" placeholder="What this session covers" />
         </div>
         <div class="syllabus-footer">
           <button type="submit" class="btn btn-primary btn-sm">Add class</button>
@@ -144,33 +124,59 @@
     </div>
   </div>
 
-  <div class="dash-section">
-    <h2>Add teacher</h2>
-    <form id="add-teacher-form" class="card" style="max-width: 400px;">
-      <div class="auth-field">
-        <label for="new-name">Name</label>
-        <input type="text" id="new-name" required />
+  <div class="card admin-panel" style="margin-bottom:24px;">
+    <div class="flex items-center justify-between" style="margin-bottom:6px;">
+      <h2 style="margin:0;">Upcoming classes</h2>
+      <div class="tt-field" style="flex-direction:row; align-items:center; gap:8px;">
+        <label for="admin-sched-days">Show next</label>
+        <select id="admin-sched-days">
+          <option value="1">1 day</option>
+          <option value="3">3 days</option>
+          <option value="7" selected>7 days</option>
+          <option value="30">30 days</option>
+        </select>
       </div>
-      <div class="auth-field">
-        <label for="new-email">Email</label>
-        <input type="email" id="new-email" required />
-      </div>
-      <div class="auth-field">
-        <label for="new-password">Password</label>
-        <input type="password" id="new-password" required minlength="6" />
-      </div>
-      <button type="submit" class="btn btn-primary auth-submit">Add teacher</button>
-      <div class="auth-error" id="add-error"></div>
-    </form>
-  </div>
-
-  <div class="dash-section">
-    <h2>Teachers</h2>
-    <div class="teacher-list" id="teacher-list">
-      <div class="history-empty">Loading…</div>
     </div>
+    <p class="text-sm text-muted" style="margin-bottom:12px;">What every teacher is teaching. Edits here show up in that teacher's own dashboard.</p>
+    <div class="admin-scroll">
+      <table class="coverage-table wrap-table" id="admin-schedule-table"></table>
+    </div>
+    <div id="admin-schedule-empty" class="history-empty">No classes scheduled in this window.</div>
   </div>
 </div>
+
+<dialog id="teachers-dialog" class="admin-dialog">
+  <div class="admin-dialog-head">
+    <h2>Teachers</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <div class="teacher-list" id="teacher-list">
+    <div class="history-empty">Loading…</div>
+  </div>
+</dialog>
+
+<dialog id="add-teacher-dialog" class="admin-dialog admin-dialog-narrow">
+  <div class="admin-dialog-head">
+    <h2>Add teacher</h2>
+    <button class="btn btn-ghost btn-sm" data-close>Close</button>
+  </div>
+  <form id="add-teacher-form">
+    <div class="auth-field">
+      <label for="new-name">Name</label>
+      <input type="text" id="new-name" required />
+    </div>
+    <div class="auth-field">
+      <label for="new-email">Email</label>
+      <input type="email" id="new-email" required />
+    </div>
+    <div class="auth-field">
+      <label for="new-password">Password</label>
+      <input type="password" id="new-password" required minlength="6" />
+    </div>
+    <button type="submit" class="btn btn-primary auth-submit">Add teacher</button>
+    <div class="auth-error" id="add-error"></div>
+  </form>
+</dialog>
 
 <script type="module" src="js/admin.js"></script>
 </body>
