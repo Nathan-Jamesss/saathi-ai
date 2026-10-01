@@ -55,7 +55,7 @@ async function loadProgress() {
     <tbody>
       ${rows.map((r) => `
         <tr>
-          <td class="coverage-row-label">${r.teacher_name}${r.is_active ? '' : ' <span class="text-muted">(deactivated)</span>'}</td>
+          <td class="cell-strong">${r.teacher_name}${r.is_active ? '' : ' <span class="text-muted">(deactivated)</span>'}</td>
           <td style="min-width:160px;">
             ${r.total_classes === 0
               ? '<span class="text-muted">No timetable yet</span>'
@@ -67,6 +67,10 @@ async function loadProgress() {
         </tr>`).join('')}
     </tbody>
   `;
+}
+
+function cap(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function formatShortDate(iso) {
@@ -172,7 +176,7 @@ function buildScheduleRow(row) {
   tr.innerHTML = `
     <td>${formatDate(row.scheduled_date)}</td>
     <td>${row.teacher_name}</td>
-    <td>Class ${row.grade} · ${row.subject}</td>
+    <td>Class ${row.grade} · ${cap(row.subject)}</td>
     <td>${row.chapter}</td>
     <td>${row.focus}</td>
     <td style="white-space:nowrap;">
@@ -189,7 +193,7 @@ function startEditRow(tr, row) {
   tr.innerHTML = `
     <td><input type="date" class="edit-date" value="${row.scheduled_date}" /></td>
     <td>${row.teacher_name}</td>
-    <td>Class ${row.grade} · ${row.subject}</td>
+    <td>Class ${row.grade} · ${cap(row.subject)}</td>
     <td><input type="text" class="edit-chapter" value="${row.chapter.replace(/"/g, '&quot;')}" /></td>
     <td><input type="text" class="edit-focus" value="${row.focus.replace(/"/g, '&quot;')}" /></td>
     <td style="white-space:nowrap;">
@@ -283,7 +287,8 @@ function renderCoverageTable(coverage) {
     for (const subject of subjects) {
       const teachers = bySubjectGrade[`${grade}|${subject}`] || [];
       const covered = teachers.length > 0;
-      html += `<td class="${covered ? 'coverage-cell covered' : 'coverage-cell gap'}">${covered ? teachers.join(', ') : '—'}</td>`;
+      const label = teachers.length > 2 ? `${teachers.length} teachers` : teachers.join(', ');
+      html += `<td class="${covered ? 'coverage-cell covered' : 'coverage-cell gap'}" title="${teachers.join(', ')}">${covered ? label : '—'}</td>`;
     }
     html += '</tr>';
   }

@@ -31,14 +31,17 @@
         <div><div class="bento-stat-num" id="stat-total-teachers">0</div><div class="bento-stat-label">total</div></div>
         <div><div class="bento-stat-num" id="stat-active-teachers">0</div><div class="bento-stat-label">active</div></div>
       </div>
+      <p class="bento-desc">Teacher accounts, and how many are switched on.</p>
     </div>
     <div class="bento-card">
       <div class="bento-card-header"><span class="bento-icon">▶</span><span class="bento-label">AI sessions</span></div>
       <div class="bento-stat-num" id="stat-total-sessions" style="text-align:center;">0</div>
+      <p class="bento-desc">Lessons teachers have generated with the voice assistant.</p>
     </div>
     <div class="bento-card">
       <div class="bento-card-header"><span class="bento-icon">◐</span><span class="bento-label">Classes scheduled</span></div>
       <div class="bento-stat-num" id="stat-total-scheduled" style="text-align:center;">0</div>
+      <p class="bento-desc">Timetable classes planned across every teacher.</p>
     </div>
   </div>
 
@@ -52,7 +55,7 @@
         How far each teacher is through their timetable. Anyone well behind needs a conversation.
       </p>
       <div class="admin-scroll">
-        <table class="coverage-table wrap-table" id="progress-table"></table>
+        <table class="data-table" id="progress-table"></table>
       </div>
     </div>
 
@@ -66,7 +69,7 @@
   <div class="admin-cols admin-cols-main">
     <div class="card admin-panel">
       <h2 style="margin-bottom:6px;">Grade &amp; subject coverage</h2>
-      <p class="text-sm text-muted" style="margin-bottom:12px;">Which teachers have a syllabus for each grade and subject. Empty cells are gaps.</p>
+      <p class="text-sm text-muted" style="margin-bottom:12px;">Which teachers have a syllabus for each grade and subject. A dash means no teacher has it yet. Hover a count to see names.</p>
       <div class="admin-scroll">
         <table class="coverage-table" id="coverage-table"></table>
       </div>
@@ -139,7 +142,7 @@
     </div>
     <p class="text-sm text-muted" style="margin-bottom:12px;">What every teacher is teaching. Edits here show up in that teacher's own dashboard.</p>
     <div class="admin-scroll">
-      <table class="coverage-table wrap-table" id="admin-schedule-table"></table>
+      <table class="data-table" id="admin-schedule-table"></table>
     </div>
     <div id="admin-schedule-empty" class="history-empty">No classes scheduled in this window.</div>
   </div>

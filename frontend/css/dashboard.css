@@ -547,3 +547,75 @@
 }
 
 .admin-dialog-head h2 { font-size: 1.05rem; margin: 0; }
+
+/* ── Admin: tidy sizing and tables ── */
+.admin-panel h2 { font-size: 1rem; }
+.admin-panel { padding: 18px; }
+
+.bento-desc {
+  margin: 10px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.admin-stats .bento-stat-num { font-size: 1.6rem; }
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.data-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: var(--bg-hover); }
+.data-table .cell-strong { font-weight: 500; color: var(--text-primary); }
+.data-table td:not(.cell-strong) { color: var(--text-secondary); }
+.data-table input[type="text"],
+.data-table input[type="date"] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+}
+
+#progress-table th:nth-child(2) { width: 30%; }
+#progress-table th:nth-child(n+3) { white-space: nowrap; }
+#progress-table td:nth-child(n+3) { white-space: nowrap; }
+
+#admin-schedule-table { table-layout: fixed; }
+#admin-schedule-table th:nth-child(1) { width: 110px; }
+#admin-schedule-table th:nth-child(2) { width: 130px; }
+#admin-schedule-table th:nth-child(3) { width: 120px; }
+#admin-schedule-table th:nth-child(4) { width: 28%; }
+#admin-schedule-table th:nth-child(6) { width: 150px; }
+#admin-schedule-table td:nth-child(1) { white-space: nowrap; }
+
+#coverage-table { border-spacing: 3px; font-size: 0.76rem; }
+#coverage-table th { font-size: 0.7rem; padding: 6px 4px; white-space: normal; text-align: center; }
+#coverage-table th.coverage-row-label { text-align: left; white-space: nowrap; }
+#coverage-table .coverage-cell { padding: 8px 6px; min-width: 0; text-align: center; }
